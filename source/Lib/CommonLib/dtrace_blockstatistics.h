@@ -53,6 +53,9 @@
 #define DTRACE_POLYGON_SCALAR(ctx,channel, poc, polygon,stat_type,val)                  ctx->dtrace_polygon_scalar( channel, poc, polygon, stat_type, val )
 #define DTRACE_POLYGON_VECTOR(ctx,channel, poc, polygon,stat_type,v_x,v_y)              ctx->dtrace_polygon_vector( channel, poc, polygon, stat_type, v_x, v_y )
 
+#define DTRACE_CU_FETURE_HEAD(ctx, channel, head)                                       ctx->dtrace_block_head(channel, head)
+#define DTRACE_CU_FEATURE(ctx, channel, feature, feature_num) ctx->dtrace_block_head(channel, feature, feature_num)
+
 enum class BlockStatistic {
   // general
   PredMode,

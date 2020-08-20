@@ -47,6 +47,9 @@
 #include <algorithm>
 #include <limits>
 
+#include "dtrace_next.h"
+#include "dtrace_blockstatistics.h"
+
 
 //! \ingroup EncoderLib
 //! \{
@@ -423,6 +426,263 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
   }
 
   const PartSplit splitMode = CU::getSplitAtDepth( cu, partitioner.currDepth );
+
+  #if 1
+  static bool head_flag = true;
+  if (isLuma(partitioner.chType) && data_flag) 
+  {
+    int cu_w  = partitioner.currArea().lwidth();
+    int cu_h  = partitioner.currArea().lheight();
+    int pos_x = partitioner.currArea().lx();
+    int pos_y = partitioner.currArea().ly();
+
+    if (cu_w < 128 && (cu_w > 4 || cu_h > 4) && (cu_w + pos_x) < cs.picture->lwidth()
+        && (cu_h + pos_y) < cs.picture->lheight() && partitioner.currDepth < 6)
+    {
+      if (head_flag)
+      {
+        DTRACE_CU_FETURE_HEAD(g_trace_ctx, D_BLOCK_STATISTICS_ALL,
+                              "poc,x,y,w,h,mode,qp,qt_d,mt_d,var,H,gradx,grady,maxgrad,dvarh,dvarv,dHh,"
+                              "dHv,dgradxh,dgradxv,dgradyh,dgradyv");
+        head_flag = false;        
+      }
+
+      int feature[30];
+
+      // encoding feature
+      feature[0] = cs.picture->poc;
+      feature[1] = pos_x;
+      feature[2] = pos_y;
+      feature[3] = cu_w;
+      feature[4] = cu_h;
+      feature[5] = splitMode;
+      feature[6] = cu.qp;
+      feature[7] = partitioner.currQtDepth;
+      feature[8] = partitioner.currMtDepth;
+
+      CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+      CPelBuf orgLuma1 = cs.picture->getOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+      // calculate variance and gradient
+
+      int Gx_matrix[3][3];
+      int Gy_matrix[3][3];
+      // Sobel operator matrix for X axis
+      Gx_matrix[0][0] = -1; Gx_matrix[0][1] = 0; Gx_matrix[0][2] = 1;
+      Gx_matrix[1][0] = -2; Gx_matrix[1][1] = 0; Gx_matrix[1][2] = 2;
+      Gx_matrix[2][0] = -1; Gx_matrix[2][1] = 0; Gx_matrix[2][2] = 1;
+      // Sobel operator matrix for Y axis
+      Gy_matrix[0][0] = -1; Gy_matrix[0][1] = -2; Gy_matrix[0][2] = -1; 
+      Gy_matrix[1][0] = 0; Gy_matrix[1][1] = 0; Gy_matrix[1][2] = 0;
+      Gy_matrix[2][0] = 1; Gy_matrix[2][1] = 2; Gy_matrix[2][2] = 1;
+
+      int gradx[64][64];
+      int grady[64][64];
+      int gmx = 0;
+      int pix[256] = { 0 };
+      int pixu[256] = { 0 };
+      int pixd[256] = { 0 };
+      int pixl[256] = { 0 };
+      int pixr[256] = { 0 };
+
+      int var[5]   = { 0 };
+      int grad_s[10] = { 0 };
+
+      for (int x = 0; x < cu_w; x++)
+      {
+        for (int y = 0; y < cu_h; y++)
+        {
+          var[0] += orgLuma.at(x, y);
+
+          if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+          {
+            gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[0][1] * orgLuma.at(x - 1, y)
+                          + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[1][0] * orgLuma.at(x, y - 1)
+                          + Gx_matrix[1][1] * orgLuma.at(x, y) + Gx_matrix[1][2] * orgLuma.at(x, y + 1)
+                          + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                          + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+            grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[0][1] * orgLuma.at(x - 1, y)
+                          + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                          + Gy_matrix[1][1] * orgLuma.at(x, y) + Gy_matrix[1][2] * orgLuma.at(x, y + 1)
+                          + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[2][1] * orgLuma.at(x + 1, y)
+                          + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+          }
+          pix[orgLuma.at(x, y)]++;
+        }
+      }
+
+      int avg = var[0] / (cu_h * cu_w);
+
+      var[0] = 0;
+
+      for (int x = 0; x < cu_w; x++)
+      {
+        for (int y = 0; y < cu_h; y++)
+        {
+          var[0] += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+          if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+          {
+            grad_s[0] += abs(gradx[x][y]);
+            grad_s[1] += abs(grady[x][y]);
+
+            if (gmx < abs(gradx[x][y]))
+              gmx = abs(gradx[x][y]);
+            if (gmx < abs(grady[x][y]))
+              gmx = abs(grady[x][y]);
+          }
+        }
+      }
+
+      var[0] = var[0];
+      grad_s[0] = grad_s[0];
+      grad_s[1] = grad_s[1];      
+
+      // calculate variance of CU sub-patrs
+
+      // horizon direction
+      for (int x = 0; x < cu_w; x++)
+      {
+        for (int y = 0; y < cu_h / 2; y++)
+        {
+          var[1] += orgLuma.at(x, y);
+          pixu[orgLuma.at(x, y)]++;
+        }
+        for (int y = cu_h / 2; y < cu_h; y++)
+        {
+          var[2] += orgLuma.at(x, y);
+          pixd[orgLuma.at(x, y)]++;
+        }
+      }
+
+      int avr_h1 = 2 * var[1] / (cu_w * cu_h);
+      int avr_h2 = 2 * var[2] / (cu_w * cu_h);
+      var[1]     = 0;
+      var[2]     = 0;
+
+      for (int x = 0; x < cu_w; x++)
+      {
+        for (int y = 0; y < cu_h / 2; y++)
+        {
+          var[1] += (orgLuma.at(x, y) - avr_h1) * (orgLuma.at(x, y) - avr_h1);
+
+          if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+          {
+            grad_s[2] += abs(gradx[x][y]);
+            grad_s[3] += abs(grady[x][y]);
+          }
+        }
+        for (int y = cu_h / 2; y < cu_h; y++)
+        {
+          var[2] += (orgLuma.at(x, y) - avr_h2) * (orgLuma.at(x, y) - avr_h2);
+
+          if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+          {
+            grad_s[4] += abs(gradx[x][y]);
+            grad_s[5] += abs(grady[x][y]);
+          }
+        }
+      }
+      int dvarh = 2 * abs(var[1] - var[2]);
+      int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+      int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+
+      // Vertical direction
+      for (int y = 0; y < cu_h; y++)
+      {
+        for (int x = 0; x < cu_w / 2; x++)
+        {
+          var[3] += orgLuma.at(x, y);
+          pixl[orgLuma.at(x, y)]++;
+        }
+        for (int x = cu_w / 2; x < cu_w; x++)
+        {
+          var[4] += orgLuma.at(x, y);
+          pixr[orgLuma.at(x, y)]++;
+        }
+      }
+
+      int avr_v1 = 2 * var[3] / (cu_w * cu_h);
+      int avr_v2 = 2 * var[4] / (cu_w * cu_h);
+      var[3]     = 0;
+      var[4]     = 0;
+
+      for (int y = 0; y < cu_h; y++)
+      {
+        for (int x = 0; x < cu_w / 2; x++)
+        {
+          var[3] += (orgLuma.at(x, y) - avr_v1) * (orgLuma.at(x, y) - avr_v1);
+
+          if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+          {
+            grad_s[6] += abs(gradx[x][y]);
+            grad_s[7] += abs(grady[x][y]);
+          }
+        }
+        for (int x = cu_w / 2; x < cu_w; x++)
+        {
+          var[4] += (orgLuma.at(x, y) - avr_v2) * (orgLuma.at(x, y) - avr_v2);
+
+          if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+          {
+            grad_s[8] += abs(gradx[x][y]);
+            grad_s[9] += abs(grady[x][y]);
+          }
+        }
+      }
+
+      double H[5] = { 0, 0, 0, 0, 0 };
+      for (int i = 0; i < 256; i++)
+      {
+        if (pix[i] > 0)
+        {
+          H[0] = H[0] + pix[i] * (log2(pix[i])-log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+        }
+        if (pixu[i] > 0)
+        {
+          H[1] = H[1] + 2 * pixu[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+        }
+        if (pixd[i] > 0)
+        {
+          H[2] = H[2] + 2 * pixd[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+        }
+        if (pixl[i] > 0)
+        {
+          H[3] = H[3] + 2 * pixl[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+        }
+        if (pixr[i] > 0)
+        {
+          H[4] = H[4] + 2 * pixr[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+        }
+      }
+      H[0] = abs(H[0]);
+      double dHh = abs(H[1] - H[2]);
+      double dHv = abs(H[3] - H[4]);
+
+
+      int dvarv   = 2 * abs(var[3] - var[4]);
+      int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+      int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+      feature[9]  = var[0];
+      feature[10] = (int)(H[0]*1000);
+      feature[11] = grad_s[0];
+      feature[12] = grad_s[1];
+      feature[13] = gmx;
+      feature[14] = dvarh;
+      feature[15] = dvarv;
+      feature[16] = (int)(dHh * 1000);
+      feature[17] = (int)(dHv * 1000);
+      feature[18] = dgardxh;
+      feature[19] = dgardyh;
+      feature[20] = dgardxv;
+      feature[21] = dgardyv;
+
+      DTRACE_CU_FEATURE(g_trace_ctx, D_BLOCK_STATISTICS_ALL, feature, 22);
+    
+    }
+  }
+  #endif
 
   split_cu_mode( splitMode, cs, partitioner );
 

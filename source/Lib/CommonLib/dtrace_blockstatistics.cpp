@@ -105,6 +105,23 @@ std::string GetBlockStatisticTypeSpecificInfo(BlockStatistic statistic)
   return std::get<2>(statisticIterator->second);
 }
 
+void CDTrace::dtrace_block_head(int k, std::string head)
+{
+  dtrace<false>(k, "%s\n", head.c_str());
+}
+
+void CDTrace::dtrace_block_head(int k, int feature[], int feature_num) 
+{
+  for (int i = 0; i < feature_num; i++)
+  {
+    if (i == feature_num - 1)
+      dtrace<false>(k, "%d", feature[i]);
+    else
+      dtrace<false>(k, "%d,", feature[i]);
+  }
+  dtrace<false>(k, "\n");
+}
+
 void CDTrace::dtrace_block_scalar( int k, const CodingStructure &cs, std::string stat_type, signed value )
 {
 #if BLOCK_STATS_AS_CSV

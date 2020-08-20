@@ -54,6 +54,8 @@ public:
   CABACWriter(BinEncIf& binEncoder)   : m_BinEncoder(binEncoder), m_Bitstream(0) { m_TestCtx = m_BinEncoder.getCtx(); m_EncCu = NULL; }
   virtual ~CABACWriter() {}
 
+  bool data_flag;
+
 public:
   void        initCtxModels             ( const Slice&                  slice );
   void        setEncCu(EncCu* pcEncCu) { m_EncCu = pcEncCu; }

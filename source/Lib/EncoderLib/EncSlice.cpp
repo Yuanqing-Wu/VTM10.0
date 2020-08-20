@@ -1383,7 +1383,7 @@ void EncSlice::compressSlice( Picture* pcPic, const bool bCompressEntireSlice, c
 #if K0149_BLOCK_STATISTICS
   const SPS *sps = pcSlice->getSPS();
   CHECK(sps == 0, "No SPS present");
-  writeBlockStatisticsHeader(sps);
+  //writeBlockStatisticsHeader(sps);
 #endif
   m_pcInterSearch->resetAffineMVList();
   m_pcInterSearch->resetUniMvList();
@@ -1686,10 +1686,11 @@ void EncSlice::encodeCtus( Picture* pcPic, const bool bCompressEntireSlice, cons
     m_pcCuEncoder->compressCtu( cs, ctuArea, ctuRsAddr, prevQP, currQP );
 
 #if K0149_BLOCK_STATISTICS
-    getAndStoreBlockStatistics(cs, ctuArea);
+    //getAndStoreBlockStatistics(cs, ctuArea);
 #endif
 
     pCABACWriter->resetBits();
+    pCABACWriter->data_flag = false;
     pCABACWriter->coding_tree_unit( cs, ctuArea, prevQP, ctuRsAddr, true, true );
     const int numberOfWrittenBits = int( pCABACWriter->getEstFracBits() >> SCALE_BITS );
 
@@ -1861,6 +1862,7 @@ void EncSlice::encodeSlice   ( Picture* pcPic, OutputBitstream* pcSubstreams, ui
       resetBcwCodingOrder(false, cs);
     }
 
+    m_CABACWriter->data_flag = true;
     m_CABACWriter->coding_tree_unit( cs, ctuArea, pcPic->m_prevQP, ctuRsAddr );
 
     // store probabilities of first CTU in line into buffer

@@ -125,6 +125,9 @@ public:
     void dtrace_repeat( int, int i_times, const char *format, /*va_list args*/... );
 #if K0149_BLOCK_STATISTICS
     void dtrace_header       ( const char *format, /*va_list args*/... );
+
+    void dtrace_block_head(int k, std::string head);
+    void CDTrace::dtrace_block_head(int k, int feature[], int feature_num);
     // CTU
     void dtrace_block_scalar( int k, const CodingStructure &cs, std::string stat_type, signed value );
     // CU
