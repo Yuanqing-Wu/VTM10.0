@@ -461,8 +461,7 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       feature[8] = partitioner.currMtDepth;
 
       CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
-      CPelBuf orgLuma1 = cs.picture->getOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
-
+    
       // calculate variance and gradient
 
       int Gx_matrix[3][3];
