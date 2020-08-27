@@ -443,11 +443,11 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       {
         DTRACE_CU_FETURE_HEAD(g_trace_ctx, D_BLOCK_STATISTICS_ALL,
                               "poc,x,y,w,h,mode,qp,qt_d,mt_d,var,H,gradx,grady,maxgrad,dvarh,dvarv,dHh,"
-                              "dHv,dgradxh,dgradxv,dgradyh,dgradyv");
+                              "dHv,dgradxh,dgradyh,dgradxv,dgradyv,nvar,ngradx,ngrady,ndvarh,ndvarv,ndgradxh,ndgradyh,ndgradxv,ndgradyv,ngrad,ndvar,ndgradh,ndgradv,gard,dvar,dgradh,dgradv");
         head_flag = false;        
       }
 
-      int feature[30];
+      int feature[50];
 
       // encoding feature
       feature[0] = cs.picture->poc;
@@ -467,13 +467,13 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       int Gx_matrix[3][3];
       int Gy_matrix[3][3];
       // Sobel operator matrix for X axis
-      Gx_matrix[0][0] = -1; Gx_matrix[0][1] = 0; Gx_matrix[0][2] = 1;
-      Gx_matrix[1][0] = -2; Gx_matrix[1][1] = 0; Gx_matrix[1][2] = 2;
-      Gx_matrix[2][0] = -1; Gx_matrix[2][1] = 0; Gx_matrix[2][2] = 1;
+      Gx_matrix[0][0] = -1; Gx_matrix[1][0] = 0; Gx_matrix[2][0] = 1;
+      Gx_matrix[0][1] = -2; Gx_matrix[1][1] = 0; Gx_matrix[2][1] = 2;
+      Gx_matrix[0][2] = -1; Gx_matrix[1][2] = 0; Gx_matrix[2][2] = 1;
       // Sobel operator matrix for Y axis
-      Gy_matrix[0][0] = -1; Gy_matrix[0][1] = -2; Gy_matrix[0][2] = -1; 
-      Gy_matrix[1][0] = 0; Gy_matrix[1][1] = 0; Gy_matrix[1][2] = 0;
-      Gy_matrix[2][0] = 1; Gy_matrix[2][1] = 2; Gy_matrix[2][2] = 1;
+      Gy_matrix[0][0] = -1; Gy_matrix[1][0] = -2; Gy_matrix[2][0] = -1; 
+      Gy_matrix[0][1] = 0;  Gy_matrix[1][1] = 0;  Gy_matrix[2][1] = 0;
+      Gy_matrix[0][2] = 1;  Gy_matrix[1][2] = 2;  Gy_matrix[2][2] = 1;
 
       int gradx[64][64];
       int grady[64][64];
@@ -495,17 +495,13 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
 
           if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
           {
-            gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[0][1] * orgLuma.at(x - 1, y)
-                          + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[1][0] * orgLuma.at(x, y - 1)
-                          + Gx_matrix[1][1] * orgLuma.at(x, y) + Gx_matrix[1][2] * orgLuma.at(x, y + 1)
-                          + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
-                          + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+            gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                        + Gx_matrix[0][1] * orgLuma.at(x - 1, y)     + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                        + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);                                                                                          
 
-            grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[0][1] * orgLuma.at(x - 1, y)
-                          + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
-                          + Gy_matrix[1][1] * orgLuma.at(x, y) + Gy_matrix[1][2] * orgLuma.at(x, y + 1)
-                          + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[2][1] * orgLuma.at(x + 1, y)
-                          + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+            grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1) + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) 
+                        + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+                                                    
           }
           pix[orgLuma.at(x, y)]++;
         }
@@ -535,7 +531,7 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
 
       var[0] = var[0];
       grad_s[0] = grad_s[0];
-      grad_s[1] = grad_s[1];      
+      grad_s[1] = grad_s[1];    
 
       // calculate variance of CU sub-patrs
 
@@ -675,9 +671,33 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       feature[18] = dgardxh;
       feature[19] = dgardyh;
       feature[20] = dgardxv;
-      feature[21] = dgardyv;
+      feature[21] = dgardyv;      
 
-      DTRACE_CU_FEATURE(g_trace_ctx, D_BLOCK_STATISTICS_ALL, feature, 22);
+      //normalize
+      feature[22]  = var[0] / (cu_h * cu_w);
+      feature[23] = grad_s[0] / (cu_h * cu_w);
+      feature[24] = grad_s[1] / (cu_h * cu_w);      
+      feature[25] = 2 * dvarh / (cu_h * cu_w);
+      feature[26] = 2 * dvarv / (cu_h * cu_w);     
+      feature[27] = 2 * dgardxh / (cu_h * cu_w);
+      feature[28] = 2 * dgardyh / (cu_h * cu_w);
+      feature[29] = 2 * dgardxv / (cu_h * cu_w);
+      feature[30] = 2 * dgardyv / (cu_h * cu_w);
+
+      //normalize sub-cu dif sum
+      feature[31] = (grad_s[0] + grad_s[1]) / (cu_h * cu_w);
+      feature[32] = 2 * (dvarv + dvarh) / (cu_h * cu_w);
+      feature[33] = 2 * (dgardxh + dgardyh)/ (cu_h * cu_w);
+      feature[34] = 2 * (dgardxv + dgardyv)/ (cu_h * cu_w);
+
+      //sub-cu dif sum
+      feature[35] = grad_s[0] + grad_s[1];
+      feature[36] = dvarv + dvarh;
+      feature[37] = dgardxh + dgardyh;
+      feature[38] = dgardxv + dgardyv;
+
+
+      DTRACE_CU_FEATURE(g_trace_ctx, D_BLOCK_STATISTICS_ALL, feature, 39);
     
     }
   }
