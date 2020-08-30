@@ -442,8 +442,7 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       if (head_flag)
       {
         DTRACE_CU_FETURE_HEAD(g_trace_ctx, D_BLOCK_STATISTICS_ALL,
-                              "poc,x,y,w,h,mode,qp,qt_d,mt_d,var,H,gradx,grady,maxgrad,dvarh,dvarv,dHh,"
-                              "dHv,dgradxh,dgradyh,dgradxv,dgradyv,nvar,ngradx,ngrady,ndvarh,ndvarv,ndgradxh,ndgradyh,ndgradxv,ndgradyv,ngrad,ndvar,ndgradh,ndgradv,gard,dvar,dgradh,dgradv");
+                              "poc,x,y,w,h,mode,qp,nvar,H,ngradx,ngrady,gmx,ndvarh,ndvarv,ndgradxh,ndgradyh,ndgradxv,ndgradyv");
         head_flag = false;        
       }
 
@@ -457,8 +456,6 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       feature[4] = cu_h;
       feature[5] = splitMode;
       feature[6] = cu.qp;
-      feature[7] = partitioner.currQtDepth;
-      feature[8] = partitioner.currMtDepth;
 
       CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
     
@@ -478,11 +475,7 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
       int gradx[64][64];
       int grady[64][64];
       int gmx = 0;
-      int pix[256] = { 0 };
-      int pixu[256] = { 0 };
-      int pixd[256] = { 0 };
-      int pixl[256] = { 0 };
-      int pixr[256] = { 0 };
+      int pix[1024] = { 0 };
 
       int var[5]   = { 0 };
       int grad_s[10] = { 0 };
@@ -541,12 +534,10 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
         for (int y = 0; y < cu_h / 2; y++)
         {
           var[1] += orgLuma.at(x, y);
-          pixu[orgLuma.at(x, y)]++;
         }
         for (int y = cu_h / 2; y < cu_h; y++)
         {
           var[2] += orgLuma.at(x, y);
-          pixd[orgLuma.at(x, y)]++;
         }
       }
 
@@ -588,12 +579,10 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
         for (int x = 0; x < cu_w / 2; x++)
         {
           var[3] += orgLuma.at(x, y);
-          pixl[orgLuma.at(x, y)]++;
         }
         for (int x = cu_w / 2; x < cu_w; x++)
         {
           var[4] += orgLuma.at(x, y);
-          pixr[orgLuma.at(x, y)]++;
         }
       }
 
@@ -626,78 +615,35 @@ void CABACWriter::coding_tree(const CodingStructure& cs, Partitioner& partitione
         }
       }
 
-      double H[5] = { 0, 0, 0, 0, 0 };
-      for (int i = 0; i < 256; i++)
+      
+      int    dvarv = 2 * abs(var[3] - var[4]);
+      int    dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+      int    dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+      double H = 0;
+      for (int i = 0; i < 1024; i++)
       {
         if (pix[i] > 0)
         {
-          H[0] = H[0] + pix[i] * (log2(pix[i])-log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
-        }
-        if (pixu[i] > 0)
-        {
-          H[1] = H[1] + 2 * pixu[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
-        }
-        if (pixd[i] > 0)
-        {
-          H[2] = H[2] + 2 * pixd[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
-        }
-        if (pixl[i] > 0)
-        {
-          H[3] = H[3] + 2 * pixl[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
-        }
-        if (pixr[i] > 0)
-        {
-          H[4] = H[4] + 2 * pixr[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+          H = H + pix[i] * (log2(pix[i])-log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
         }
       }
-      H[0] = abs(H[0]);
-      double dHh = abs(H[1] - H[2]);
-      double dHv = abs(H[3] - H[4]);
+      H = abs(H);
 
-
-      int dvarv   = 2 * abs(var[3] - var[4]);
-      int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
-      int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
-
-      feature[9]  = var[0];
-      feature[10] = (int)(H[0]*1000);
-      feature[11] = grad_s[0];
-      feature[12] = grad_s[1];
-      feature[13] = gmx;
-      feature[14] = dvarh;
-      feature[15] = dvarv;
-      feature[16] = (int)(dHh * 1000);
-      feature[17] = (int)(dHv * 1000);
-      feature[18] = dgardxh;
-      feature[19] = dgardyh;
-      feature[20] = dgardxv;
-      feature[21] = dgardyv;      
-
-      //normalize
-      feature[22]  = var[0] / (cu_h * cu_w);
-      feature[23] = grad_s[0] / (cu_h * cu_w);
-      feature[24] = grad_s[1] / (cu_h * cu_w);      
-      feature[25] = 2 * dvarh / (cu_h * cu_w);
-      feature[26] = 2 * dvarv / (cu_h * cu_w);     
-      feature[27] = 2 * dgardxh / (cu_h * cu_w);
-      feature[28] = 2 * dgardyh / (cu_h * cu_w);
-      feature[29] = 2 * dgardxv / (cu_h * cu_w);
-      feature[30] = 2 * dgardyv / (cu_h * cu_w);
-
-      //normalize sub-cu dif sum
-      feature[31] = (grad_s[0] + grad_s[1]) / (cu_h * cu_w);
-      feature[32] = 2 * (dvarv + dvarh) / (cu_h * cu_w);
-      feature[33] = 2 * (dgardxh + dgardyh)/ (cu_h * cu_w);
-      feature[34] = 2 * (dgardxv + dgardyv)/ (cu_h * cu_w);
-
-      //sub-cu dif sum
-      feature[35] = grad_s[0] + grad_s[1];
-      feature[36] = dvarv + dvarh;
-      feature[37] = dgardxh + dgardyh;
-      feature[38] = dgardxv + dgardyv;
-
-
-      DTRACE_CU_FEATURE(g_trace_ctx, D_BLOCK_STATISTICS_ALL, feature, 39);
+      //poc, x, y, w, h, mode, qp, nvar, H, ngradx, ngrady, gmx, ndvarh, ndvarv, ndgradxh, ndgradyh, ndgradxv, ndgradyv
+      feature[7]  = var[0] / (cu_h * cu_w);
+      feature[8] = (int)(H*1000);
+      feature[9]  = grad_s[0] / (cu_h * cu_w);
+      feature[10] = grad_s[1] / (cu_h * cu_w);     
+      feature[11] = gmx;
+      feature[12] = 2 * dvarh / (cu_h * cu_w);
+      feature[13] = 2 * dvarv / (cu_h * cu_w);  
+      feature[14] = 2 * dgardxh / (cu_h * cu_w);
+      feature[15] = 2 * dgardyh / (cu_h * cu_w);
+      feature[16] = 2 * dgardxv / (cu_h * cu_w);
+      feature[17] = 2 * dgardyv / (cu_h * cu_w);
+ 
+      DTRACE_CU_FEATURE(g_trace_ctx, D_BLOCK_STATISTICS_ALL, feature, 18);
     
     }
   }
