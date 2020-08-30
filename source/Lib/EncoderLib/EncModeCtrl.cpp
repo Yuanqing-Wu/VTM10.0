@@ -34,6 +34,7 @@
 /** \file     EncModeCtrl.cpp
     \brief    Encoder controller for trying out specific modes
 */
+#define svm 0
 
 #include "EncModeCtrl.h"
 
@@ -48,6 +49,15 @@
 #include "CommonLib/dtrace_next.h"
 
 #include <cmath>
+
+#if svm
+#include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include "svm.h"
+#endif
 
 void EncModeCtrl::init( EncCfg *pCfg, RateCtrl *pRateCtrl, RdCost* pRdCost )
 {
@@ -1224,7 +1234,258 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   //////////////////////////////////////////////////////////////////////////
   // Add unit split modes
 
-  if( !cuECtx.get<bool>( QT_BEFORE_BT ) )
+  #if svm
+
+  double sns_label = 1;
+  bool   sns_flag  = false;
+
+  int cu_w  = partitioner.currArea().lwidth();
+  int cu_h  = partitioner.currArea().lheight();
+  int pos_x = partitioner.currArea().lx();
+  int pos_y = partitioner.currArea().ly();
+
+  if (cu_w == cu_h && cu_w > 8 && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
+      && (cu_h + pos_y) < cs.picture->lheight())
+  {
+    sns_flag        = true;
+    CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+    int feature[20];
+
+    // calculate variance and gradient
+
+    int Gx_matrix[3][3];
+    int Gy_matrix[3][3];
+    // Sobel operator matrix for X axis
+    Gx_matrix[0][0] = -1;
+    Gx_matrix[1][0] = 0;
+    Gx_matrix[2][0] = 1;
+    Gx_matrix[0][1] = -2;
+    Gx_matrix[1][1] = 0;
+    Gx_matrix[2][1] = 2;
+    Gx_matrix[0][2] = -1;
+    Gx_matrix[1][2] = 0;
+    Gx_matrix[2][2] = 1;
+    // Sobel operator matrix for Y axis
+    Gy_matrix[0][0] = -1;
+    Gy_matrix[1][0] = -2;
+    Gy_matrix[2][0] = -1;
+    Gy_matrix[0][1] = 0;
+    Gy_matrix[1][1] = 0;
+    Gy_matrix[2][1] = 0;
+    Gy_matrix[0][2] = 1;
+    Gy_matrix[1][2] = 2;
+    Gy_matrix[2][2] = 1;
+
+    int gradx[64][64];
+    int grady[64][64];
+    int gmx      = 0;
+    int pix[256] = { 0 };
+
+    int var[5]     = { 0 };
+    int grad_s[10] = { 0 };
+
+    for (int x = 0; x < cu_w; x++)
+    {
+      for (int y = 0; y < cu_h; y++)
+      {
+        var[0] += orgLuma.at(x, y);
+
+        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+        {
+          gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                        + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                        + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+          grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                        + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
+                        + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+        }
+        pix[orgLuma.at(x, y)]++;
+      }
+    }
+
+    int avg = var[0] / (cu_h * cu_w);
+
+    var[0] = 0;
+
+    for (int x = 0; x < cu_w; x++)
+    {
+      for (int y = 0; y < cu_h; y++)
+      {
+        var[0] += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+        {
+          grad_s[0] += abs(gradx[x][y]);
+          grad_s[1] += abs(grady[x][y]);
+
+          if (gmx < abs(gradx[x][y]))
+            gmx = abs(gradx[x][y]);
+          if (gmx < abs(grady[x][y]))
+            gmx = abs(grady[x][y]);
+        }
+      }
+    }
+
+    var[0]    = var[0];
+    grad_s[0] = grad_s[0];
+    grad_s[1] = grad_s[1];
+
+    // calculate variance of CU sub-patrs
+
+    // horizon direction
+    for (int x = 0; x < cu_w; x++)
+    {
+      for (int y = 0; y < cu_h / 2; y++)
+      {
+        var[1] += orgLuma.at(x, y);
+      }
+      for (int y = cu_h / 2; y < cu_h; y++)
+      {
+        var[2] += orgLuma.at(x, y);
+      }
+    }
+
+    int avr_h1 = 2 * var[1] / (cu_w * cu_h);
+    int avr_h2 = 2 * var[2] / (cu_w * cu_h);
+    var[1]     = 0;
+    var[2]     = 0;
+
+    for (int x = 0; x < cu_w; x++)
+    {
+      for (int y = 0; y < cu_h / 2; y++)
+      {
+        var[1] += (orgLuma.at(x, y) - avr_h1) * (orgLuma.at(x, y) - avr_h1);
+
+        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+        {
+          grad_s[2] += abs(gradx[x][y]);
+          grad_s[3] += abs(grady[x][y]);
+        }
+      }
+      for (int y = cu_h / 2; y < cu_h; y++)
+      {
+        var[2] += (orgLuma.at(x, y) - avr_h2) * (orgLuma.at(x, y) - avr_h2);
+
+        if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+        {
+          grad_s[4] += abs(gradx[x][y]);
+          grad_s[5] += abs(grady[x][y]);
+        }
+      }
+    }
+    int dvarh   = 2 * abs(var[1] - var[2]);
+    int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+    int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+
+    // Vertical direction
+    for (int y = 0; y < cu_h; y++)
+    {
+      for (int x = 0; x < cu_w / 2; x++)
+      {
+        var[3] += orgLuma.at(x, y);
+      }
+      for (int x = cu_w / 2; x < cu_w; x++)
+      {
+        var[4] += orgLuma.at(x, y);
+      }
+    }
+
+    int avr_v1 = 2 * var[3] / (cu_w * cu_h);
+    int avr_v2 = 2 * var[4] / (cu_w * cu_h);
+    var[3]     = 0;
+    var[4]     = 0;
+
+    for (int y = 0; y < cu_h; y++)
+    {
+      for (int x = 0; x < cu_w / 2; x++)
+      {
+        var[3] += (orgLuma.at(x, y) - avr_v1) * (orgLuma.at(x, y) - avr_v1);
+
+        if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+        {
+          grad_s[6] += abs(gradx[x][y]);
+          grad_s[7] += abs(grady[x][y]);
+        }
+      }
+      for (int x = cu_w / 2; x < cu_w; x++)
+      {
+        var[4] += (orgLuma.at(x, y) - avr_v2) * (orgLuma.at(x, y) - avr_v2);
+
+        if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+        {
+          grad_s[8] += abs(gradx[x][y]);
+          grad_s[9] += abs(grady[x][y]);
+        }
+      }
+    }
+
+    double H[5] = { 0, 0, 0, 0, 0 };
+    for (int i = 0; i < 256; i++)
+    {
+      if (pix[i] > 0)
+      {
+        H[0] = H[0] + pix[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
+      }
+    }
+    H[0] = abs(H[0]);
+
+    int dvarv   = 2 * abs(var[3] - var[4]);
+    int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+    int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+    // normalize
+    feature[0]  = cu_w;
+    feature[1]  = cs.baseQP;
+    feature[2]  = (int) (H[0] * 1000);
+    feature[3]  = var[0] / (cu_h * cu_w);
+    feature[4]  = grad_s[0] / (cu_h * cu_w);
+    feature[5]  = grad_s[1] / (cu_h * cu_w);
+    feature[6]  = 2 * dvarh / (cu_h * cu_w);
+    feature[7]  = 2 * dvarv / (cu_h * cu_w);
+    feature[8]  = 2 * dgardxh / (cu_h * cu_w);
+    feature[9]  = 2 * dgardyh / (cu_h * cu_w);
+    feature[10] = 2 * dgardxv / (cu_h * cu_w);
+    feature[11] = 2 * dgardyv / (cu_h * cu_w);
+
+
+    int predict_probability = 0;
+    int max_nr_attr         = 20;
+
+    static struct svm_model *model = NULL;
+    static bool mode_read_flag = false;
+
+    double *prob_estimates = NULL;    
+    struct svm_node *x = NULL;    
+
+    if (!mode_read_flag)
+    {
+      model = svm_load_model("E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\test.model");
+      mode_read_flag = true;
+    }
+
+    prob_estimates = (double *) malloc(2 * sizeof(double));
+    x              = (struct svm_node *) realloc(x, max_nr_attr * sizeof(struct svm_node));   // allocate memory for x
+
+    int i;
+    for (i = 0; i < 12; i++)
+    {
+      x[i].index = i + 1;
+      x[i].value = feature[i];
+    }
+    x[12].index = -1;
+    sns_label = svm_predict_probability(model, x, prob_estimates);
+    printf_s("%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, sns_label, prob_estimates[0], prob_estimates[1]);
+    // else
+    //svm_free_and_destroy_model(&model);
+    free(x);
+    free(prob_estimates);
+  }
+
+#endif
+
+#if svm  
+  if (!cuECtx.get<bool>(QT_BEFORE_BT) && sns_label)
   {
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
@@ -1232,7 +1493,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if( partitioner.canSplit( CU_TRIV_SPLIT, cs ) )
+  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && sns_label)
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1241,7 +1502,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if( partitioner.canSplit( CU_TRIH_SPLIT, cs ) )
+  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && sns_label)
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1253,7 +1514,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int minQPq = minQP;
   int maxQPq = maxQP;
   xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT );
-  if( partitioner.canSplit( CU_VERT_SPLIT, cs ) )
+  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && sns_label)
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1267,7 +1528,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_VERT_SPLIT, false );
   }
 
-  if( partitioner.canSplit( CU_HORZ_SPLIT, cs ) )
+  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && sns_label)
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1281,13 +1542,79 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, false );
   }
 
-  if( cuECtx.get<bool>( QT_BEFORE_BT ) )
+  if (cuECtx.get<bool>(QT_BEFORE_BT) && sns_label)
   {
     for( int qp = maxQPq; qp >= minQPq; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD, qp } );
     }
   }
+#else
+    if (!cuECtx.get<bool>(QT_BEFORE_BT))
+  {
+    for( int qp = maxQP; qp >= minQP; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD, qp } );
+    }
+  }
+
+  if (partitioner.canSplit(CU_TRIV_SPLIT, cs))
+  {
+    // add split modes
+    for( int qp = maxQP; qp >= minQP; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_TT_V, ETO_STANDARD, qp } );
+    }
+  }
+
+  if (partitioner.canSplit(CU_TRIH_SPLIT, cs))
+  {
+    // add split modes
+    for( int qp = maxQP; qp >= minQP; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_TT_H, ETO_STANDARD, qp } );
+    }
+  }
+
+  int minQPq = minQP;
+  int maxQPq = maxQP;
+  xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT );
+  if (partitioner.canSplit(CU_VERT_SPLIT, cs))
+  {
+    // add split modes
+    for( int qp = maxQP; qp >= minQP; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_BT_V, ETO_STANDARD, qp } );
+    }
+    m_ComprCUCtxList.back().set( DID_VERT_SPLIT, true );
+  }
+  else
+  {
+    m_ComprCUCtxList.back().set( DID_VERT_SPLIT, false );
+  }
+
+  if (partitioner.canSplit(CU_HORZ_SPLIT, cs))
+  {
+    // add split modes
+    for( int qp = maxQP; qp >= minQP; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_BT_H, ETO_STANDARD, qp } );
+    }
+    m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, true );
+  }
+  else
+  {
+    m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, false );
+  }
+
+  if (cuECtx.get<bool>(QT_BEFORE_BT))
+  {
+    for( int qp = maxQPq; qp >= minQPq; qp-- )
+    {
+      m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD, qp } );
+    }
+  }
+#endif
 
   m_ComprCUCtxList.back().testModes.push_back( { ETM_POST_DONT_SPLIT } );
 
@@ -1322,7 +1649,11 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
 #endif
     // add intra modes
-    if( tryIntraRdo )
+    #if svm
+    if (tryIntraRdo && (!sns_label||!sns_flag))
+    #else
+    if (tryIntraRdo)
+    #endif
     {
     if (cs.slice->getSPS()->getPLTMode() && (partitioner.treeType != TREE_D || cs.slice->isIntra() || (cs.area.lwidth() == 4 && cs.area.lheight() == 4)) && getPltEnc())
     {
@@ -1353,7 +1684,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       const int  qp       = std::max( qpLoop, lowestQP );
       if (m_pcEncCfg->getIMV())
       {
-        m_ComprCUCtxList.back().testModes.push_back({ ETM_INTER_ME,  EncTestModeOpts( 4 << ETO_IMV_SHIFT ), qp });
+        m_ComprCUCtxList.back(
+        ).testModes.push_back({ ETM_INTER_ME,  EncTestModeOpts( 4 << ETO_IMV_SHIFT ), qp });
       }
       if( m_pcEncCfg->getIMV() || m_pcEncCfg->getUseAffineAmvr() )
       {
