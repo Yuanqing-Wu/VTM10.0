@@ -34,7 +34,7 @@
 /** \file     EncModeCtrl.cpp
     \brief    Encoder controller for trying out specific modes
 */
-#define svm 0
+#define svm 1
 
 #include "EncModeCtrl.h"
 
@@ -1437,16 +1437,17 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     // normalize
     feature[0]  = cu_w;
     feature[1]  = cs.baseQP;
-    feature[2]  = (int) (H[0] * 1000);
-    feature[3]  = var[0] / (cu_h * cu_w);
+    feature[2]  = var[0] / (cu_h * cu_w);
+    feature[3]  = (int) (H[0] * 1000);
     feature[4]  = grad_s[0] / (cu_h * cu_w);
     feature[5]  = grad_s[1] / (cu_h * cu_w);
-    feature[6]  = 2 * dvarh / (cu_h * cu_w);
-    feature[7]  = 2 * dvarv / (cu_h * cu_w);
-    feature[8]  = 2 * dgardxh / (cu_h * cu_w);
-    feature[9]  = 2 * dgardyh / (cu_h * cu_w);
-    feature[10] = 2 * dgardxv / (cu_h * cu_w);
-    feature[11] = 2 * dgardyv / (cu_h * cu_w);
+    feature[6]  = gmx;
+    feature[7]  = 2 * dvarh / (cu_h * cu_w);
+    feature[8]  = 2 * dvarv / (cu_h * cu_w);
+    feature[9]  = 2 * dgardxh / (cu_h * cu_w);
+    feature[10]  = 2 * dgardyh / (cu_h * cu_w);
+    feature[11] = 2 * dgardxv / (cu_h * cu_w);
+    feature[12] = 2 * dgardyv / (cu_h * cu_w);
 
 
     int predict_probability = 0;
@@ -1460,7 +1461,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
     if (!mode_read_flag)
     {
-      model = svm_load_model("E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\test.model");
+      model = svm_load_model("E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\s_ns_square.model");
       mode_read_flag = true;
     }
 
@@ -1468,14 +1469,14 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     x              = (struct svm_node *) realloc(x, max_nr_attr * sizeof(struct svm_node));   // allocate memory for x
 
     int i;
-    for (i = 0; i < 12; i++)
+    for (i = 0; i < 13; i++)
     {
       x[i].index = i + 1;
       x[i].value = feature[i];
     }
-    x[12].index = -1;
+    x[13].index = -1;
     sns_label = svm_predict_probability(model, x, prob_estimates);
-    printf_s("%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, sns_label, prob_estimates[0], prob_estimates[1]);
+    //printf_s("%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, sns_label, prob_estimates[0], prob_estimates[1]);
     // else
     //svm_free_and_destroy_model(&model);
     free(x);
