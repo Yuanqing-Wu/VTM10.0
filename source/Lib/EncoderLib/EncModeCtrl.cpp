@@ -34,7 +34,7 @@
 /** \file     EncModeCtrl.cpp
     \brief    Encoder controller for trying out specific modes
 */
-#define svm 1
+
 
 #include "EncModeCtrl.h"
 
@@ -57,6 +57,10 @@
 #include <string.h>
 #include <errno.h>
 #include "svm.h"
+
+void cal_feature(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
+void cal_feature_no_var(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
+void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
 #endif
 
 void EncModeCtrl::init( EncCfg *pCfg, RateCtrl *pRateCtrl, RdCost* pRdCost )
@@ -1236,251 +1240,144 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
   #if svm
 
-  double sns_label = 1;
-  bool   sns_flag  = false;
-
   int cu_w  = partitioner.currArea().lwidth();
   int cu_h  = partitioner.currArea().lheight();
   int pos_x = partitioner.currArea().lx();
   int pos_y = partitioner.currArea().ly();
 
-  if (cu_w == cu_h && cu_w > 8 && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
-      && (cu_h + pos_y) < cs.picture->lheight())
+  double sns_label = 1;
+  bool   sns_flag  = false;
+  
+
+  if ((cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
+      && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64))))
   {
-    sns_flag        = true;
-    CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+    int feature[20] = { 0 };  
 
-    int feature[20];
+    bool w_over_h = true;
+    if (cu_w < cu_h)
+      w_over_h = false;
 
-    // calculate variance and gradient
-
-    int Gx_matrix[3][3];
-    int Gy_matrix[3][3];
-    // Sobel operator matrix for X axis
-    Gx_matrix[0][0] = -1;
-    Gx_matrix[1][0] = 0;
-    Gx_matrix[2][0] = 1;
-    Gx_matrix[0][1] = -2;
-    Gx_matrix[1][1] = 0;
-    Gx_matrix[2][1] = 2;
-    Gx_matrix[0][2] = -1;
-    Gx_matrix[1][2] = 0;
-    Gx_matrix[2][2] = 1;
-    // Sobel operator matrix for Y axis
-    Gy_matrix[0][0] = -1;
-    Gy_matrix[1][0] = -2;
-    Gy_matrix[2][0] = -1;
-    Gy_matrix[0][1] = 0;
-    Gy_matrix[1][1] = 0;
-    Gy_matrix[2][1] = 0;
-    Gy_matrix[0][2] = 1;
-    Gy_matrix[1][2] = 2;
-    Gy_matrix[2][2] = 1;
-
-    int gradx[64][64];
-    int grady[64][64];
-    int gmx      = 0;
-    int pix[256] = { 0 };
-
-    int var[5]     = { 0 };
-    int grad_s[10] = { 0 };
-
-    for (int x = 0; x < cu_w; x++)
+    enum classifier_type
     {
-      for (int y = 0; y < cu_h; y++)
-      {
-        var[0] += orgLuma.at(x, y);
+      sns_64x64,
+      sns_32x32,
+      sns_16x16,
+      sns_8x8,
+      sns_32x16,
+      sns_32x8,
+      sns_32x4,
+      sns_16x8,
+      sns_16x4,
+      sns_8x4,
+    };
+    int classifier;
+    int feature_num = 0;
 
-        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
-        {
-          gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
-                        + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
-                        + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+    if (cu_w == 64 && cu_h == 64)
+      classifier = sns_64x64;
+    else if (cu_w == 32 && cu_h == 32)
+      classifier = sns_32x32;
+    else if (cu_w == 16 && cu_h == 16)
+      classifier = sns_16x16;
+    else if (cu_w == 8 && cu_h == 8)
+      classifier = sns_8x8;
+    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+      classifier = sns_32x16;
+    else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
+      classifier = sns_32x8;
+    else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
+      classifier = sns_32x4;
+    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+      classifier = sns_16x8;
+    else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
+      classifier = sns_16x4;
+    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+      classifier = sns_8x4;
 
-          grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
-                        + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
-                        + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
-        }
-        pix[orgLuma.at(x, y)]++;
-      }
-    }
+    struct svm_model *model = NULL;
 
-    int avg = var[0] / (cu_h * cu_w);
-
-    var[0] = 0;
-
-    for (int x = 0; x < cu_w; x++)
+    switch (classifier)
     {
-      for (int y = 0; y < cu_h; y++)
-      {
-        var[0] += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
-        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
-        {
-          grad_s[0] += abs(gradx[x][y]);
-          grad_s[1] += abs(grady[x][y]);
+    case sns_64x64: 
+      cal_feature_no_var(partitioner, cs, feature, w_over_h); 
+      model = m_pcEncCfg->s_ns_64x64;
+      feature_num = 8;
+      break;
 
-          if (gmx < abs(gradx[x][y]))
-            gmx = abs(gradx[x][y]);
-          if (gmx < abs(grady[x][y]))
-            gmx = abs(grady[x][y]);
-        }
-      }
+    case sns_32x32:
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_32x32;
+      feature_num = 8;
+      break;
+
+    case sns_16x16:
+      cal_feature(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_16x16;
+      feature_num = 9;
+      break;
+
+    case sns_8x8:
+      cal_feature(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_8x8;
+      feature_num = 9;
+      break;
+
+    case sns_32x16:
+      cal_feature(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_32x16;
+      feature_num = 9;
+      break;
+
+    case sns_32x8:
+      cal_feature(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_32x8;
+      feature_num = 9;
+      break;
+
+    case sns_32x4:
+      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_32x4;
+      feature_num = 7;
+      break;
+
+    case sns_16x8:
+      cal_feature(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_16x8;
+      feature_num = 9;
+      break;
+
+    case sns_16x4:
+      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_16x4;
+      feature_num = 7;
+      break;
+
+    case sns_8x4:
+      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+      model       = m_pcEncCfg->s_ns_8x4;
+      feature_num = 7;
+      break;
+
+    default: break;
     }
-
-    var[0]    = var[0];
-    grad_s[0] = grad_s[0];
-    grad_s[1] = grad_s[1];
-
-    // calculate variance of CU sub-patrs
-
-    // horizon direction
-    for (int x = 0; x < cu_w; x++)
-    {
-      for (int y = 0; y < cu_h / 2; y++)
-      {
-        var[1] += orgLuma.at(x, y);
-      }
-      for (int y = cu_h / 2; y < cu_h; y++)
-      {
-        var[2] += orgLuma.at(x, y);
-      }
-    }
-
-    int avr_h1 = 2 * var[1] / (cu_w * cu_h);
-    int avr_h2 = 2 * var[2] / (cu_w * cu_h);
-    var[1]     = 0;
-    var[2]     = 0;
-
-    for (int x = 0; x < cu_w; x++)
-    {
-      for (int y = 0; y < cu_h / 2; y++)
-      {
-        var[1] += (orgLuma.at(x, y) - avr_h1) * (orgLuma.at(x, y) - avr_h1);
-
-        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
-        {
-          grad_s[2] += abs(gradx[x][y]);
-          grad_s[3] += abs(grady[x][y]);
-        }
-      }
-      for (int y = cu_h / 2; y < cu_h; y++)
-      {
-        var[2] += (orgLuma.at(x, y) - avr_h2) * (orgLuma.at(x, y) - avr_h2);
-
-        if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
-        {
-          grad_s[4] += abs(gradx[x][y]);
-          grad_s[5] += abs(grady[x][y]);
-        }
-      }
-    }
-    int dvarh   = 2 * abs(var[1] - var[2]);
-    int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
-    int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
-
-    // Vertical direction
-    for (int y = 0; y < cu_h; y++)
-    {
-      for (int x = 0; x < cu_w / 2; x++)
-      {
-        var[3] += orgLuma.at(x, y);
-      }
-      for (int x = cu_w / 2; x < cu_w; x++)
-      {
-        var[4] += orgLuma.at(x, y);
-      }
-    }
-
-    int avr_v1 = 2 * var[3] / (cu_w * cu_h);
-    int avr_v2 = 2 * var[4] / (cu_w * cu_h);
-    var[3]     = 0;
-    var[4]     = 0;
-
-    for (int y = 0; y < cu_h; y++)
-    {
-      for (int x = 0; x < cu_w / 2; x++)
-      {
-        var[3] += (orgLuma.at(x, y) - avr_v1) * (orgLuma.at(x, y) - avr_v1);
-
-        if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
-        {
-          grad_s[6] += abs(gradx[x][y]);
-          grad_s[7] += abs(grady[x][y]);
-        }
-      }
-      for (int x = cu_w / 2; x < cu_w; x++)
-      {
-        var[4] += (orgLuma.at(x, y) - avr_v2) * (orgLuma.at(x, y) - avr_v2);
-
-        if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
-        {
-          grad_s[8] += abs(gradx[x][y]);
-          grad_s[9] += abs(grady[x][y]);
-        }
-      }
-    }
-
-    double H[5] = { 0, 0, 0, 0, 0 };
-    for (int i = 0; i < 256; i++)
-    {
-      if (pix[i] > 0)
-      {
-        H[0] = H[0] + pix[i] * (log2(pix[i]) - log2(cu_h * cu_w / 2)) / (cu_h * cu_w);
-      }
-    }
-    H[0] = abs(H[0]);
-
-    int dvarv   = 2 * abs(var[3] - var[4]);
-    int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
-    int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
-
-    // normalize
-    feature[0]  = cu_w;
-    feature[1]  = cs.baseQP;
-    feature[2]  = var[0] / (cu_h * cu_w);
-    feature[3]  = (int) (H[0] * 1000);
-    feature[4]  = grad_s[0] / (cu_h * cu_w);
-    feature[5]  = grad_s[1] / (cu_h * cu_w);
-    feature[6]  = gmx;
-    feature[7]  = 2 * dvarh / (cu_h * cu_w);
-    feature[8]  = 2 * dvarv / (cu_h * cu_w);
-    feature[9]  = 2 * dgardxh / (cu_h * cu_w);
-    feature[10]  = 2 * dgardyh / (cu_h * cu_w);
-    feature[11] = 2 * dgardxv / (cu_h * cu_w);
-    feature[12] = 2 * dgardyv / (cu_h * cu_w);
-
-
-    int predict_probability = 0;
-    int max_nr_attr         = 20;
-
-    static struct svm_model *model = NULL;
-    static bool mode_read_flag = false;
-
+    
+    int max_feature_num = 10;
     double *prob_estimates = NULL;    
-    struct svm_node *x = NULL;    
-
-    if (!mode_read_flag)
-    {
-      model = svm_load_model("E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\s_ns_square.model");
-      mode_read_flag = true;
-    }
+    struct svm_node *x = NULL;        
 
     prob_estimates = (double *) malloc(2 * sizeof(double));
-    x              = (struct svm_node *) realloc(x, max_nr_attr * sizeof(struct svm_node));   // allocate memory for x
+    x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
 
-    int i;
-    for (i = 0; i < 13; i++)
+    for (int i = 0; i < feature_num; i++)
     {
       x[i].index = i + 1;
       x[i].value = feature[i];
     }
-    x[13].index = -1;
+    x[feature_num].index = -1;
     sns_label = svm_predict_probability(model, x, prob_estimates);
-    //printf_s("%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, sns_label, prob_estimates[0], prob_estimates[1]);
-    // else
-    //svm_free_and_destroy_model(&model);
-    free(x);
-    free(prob_estimates);
+    //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+
   }
 
 #endif
@@ -2551,4 +2448,487 @@ bool EncModeCtrlMTnoRQT::parallelJobSelector( const EncTestMode& encTestmode, co
 
 #endif
 
+#if svm
+void cal_feature(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h)
+{
+  int cu_w  = partitioner.currArea().lwidth();
+  int cu_h  = partitioner.currArea().lheight();
+  int pos_x = partitioner.currArea().lx();
+  int pos_y = partitioner.currArea().ly();
 
+  CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+  // calculate variance and gradient
+
+  int Gx_matrix[3][3];
+  int Gy_matrix[3][3];
+  // Sobel operator matrix for X axis
+  Gx_matrix[0][0] = -1;
+  Gx_matrix[1][0] = 0;
+  Gx_matrix[2][0] = 1;
+  Gx_matrix[0][1] = -2;
+  Gx_matrix[1][1] = 0;
+  Gx_matrix[2][1] = 2;
+  Gx_matrix[0][2] = -1;
+  Gx_matrix[1][2] = 0;
+  Gx_matrix[2][2] = 1;
+  // Sobel operator matrix for Y axis
+  Gy_matrix[0][0] = -1;
+  Gy_matrix[1][0] = -2;
+  Gy_matrix[2][0] = -1;
+  Gy_matrix[0][1] = 0;
+  Gy_matrix[1][1] = 0;
+  Gy_matrix[2][1] = 0;
+  Gy_matrix[0][2] = 1;
+  Gy_matrix[1][2] = 2;
+  Gy_matrix[2][2] = 1;
+
+  int gradx[64][64];
+  int grady[64][64];
+  int gmx = 0;
+
+  int var = 0;
+  int grad_s[10] = { 0 };
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      var += orgLuma.at(x, y);
+
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                      + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                      + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+        grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                      + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
+                      + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+      }
+    }
+  }
+
+  int avg = var / (cu_h * cu_w);
+
+  var = 0;
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[0] += abs(gradx[x][y]);
+        grad_s[1] += abs(grady[x][y]);
+
+        if (gmx < abs(gradx[x][y]))
+          gmx = abs(gradx[x][y]);
+        if (gmx < abs(grady[x][y]))
+          gmx = abs(grady[x][y]);
+      }
+    }
+  }
+
+  grad_s[0] = grad_s[0];
+  grad_s[1] = grad_s[1];
+
+  // calculate feature of CU sub-patrs
+
+  // horizon direction
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h / 2; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+      {
+        grad_s[2] += abs(gradx[x][y]);
+        grad_s[3] += abs(grady[x][y]);
+      }
+    }
+    for (int y = cu_h / 2; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+      {
+        grad_s[4] += abs(gradx[x][y]);
+        grad_s[5] += abs(grady[x][y]);
+      }
+    }
+  }
+  int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+  int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+
+  // Vertical direction
+
+  for (int y = 0; y < cu_h; y++)
+  {
+    for (int x = 0; x < cu_w / 2; x++)
+    {
+      if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[6] += abs(gradx[x][y]);
+        grad_s[7] += abs(grady[x][y]);
+      }
+    }
+    for (int x = cu_w / 2; x < cu_w; x++)
+    {
+
+      if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[8] += abs(gradx[x][y]);
+        grad_s[9] += abs(grady[x][y]);
+      }
+    }
+  }
+
+  int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+  int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+  if (w_over_h)
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = var / (cu_h * cu_w);
+    feature[2] = grad_s[0] / (cu_h * cu_w);
+    feature[3] = grad_s[1] / (cu_h * cu_w);
+    feature[4] = gmx;
+    feature[5] = 2 * dgardxh / (cu_h * cu_w);
+    feature[6] = 2 * dgardyh / (cu_h * cu_w);
+    feature[7] = 2 * dgardxv / (cu_h * cu_w);
+    feature[8] = 2 * dgardyv / (cu_h * cu_w);
+  }
+  else
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = var / (cu_h * cu_w);
+    feature[3] = grad_s[0] / (cu_h * cu_w);
+    feature[2] = grad_s[1] / (cu_h * cu_w);
+    feature[4] = gmx;
+    feature[8] = 2 * dgardxh / (cu_h * cu_w);
+    feature[7] = 2 * dgardyh / (cu_h * cu_w);
+    feature[6] = 2 * dgardxv / (cu_h * cu_w);
+    feature[5] = 2 * dgardyv / (cu_h * cu_w);
+  }
+}
+
+void cal_feature_no_var(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h)
+{
+  int cu_w  = partitioner.currArea().lwidth();
+  int cu_h  = partitioner.currArea().lheight();
+  int pos_x = partitioner.currArea().lx();
+  int pos_y = partitioner.currArea().ly();
+
+  CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+  // calculate variance and gradient
+
+  int Gx_matrix[3][3];
+  int Gy_matrix[3][3];
+  // Sobel operator matrix for X axis
+  Gx_matrix[0][0] = -1;
+  Gx_matrix[1][0] = 0;
+  Gx_matrix[2][0] = 1;
+  Gx_matrix[0][1] = -2;
+  Gx_matrix[1][1] = 0;
+  Gx_matrix[2][1] = 2;
+  Gx_matrix[0][2] = -1;
+  Gx_matrix[1][2] = 0;
+  Gx_matrix[2][2] = 1;
+  // Sobel operator matrix for Y axis
+  Gy_matrix[0][0] = -1;
+  Gy_matrix[1][0] = -2;
+  Gy_matrix[2][0] = -1;
+  Gy_matrix[0][1] = 0;
+  Gy_matrix[1][1] = 0;
+  Gy_matrix[2][1] = 0;
+  Gy_matrix[0][2] = 1;
+  Gy_matrix[1][2] = 2;
+  Gy_matrix[2][2] = 1;
+
+  int gradx[64][64];
+  int grady[64][64];
+  int gmx = 0;
+
+  int grad_s[10] = { 0 };
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                      + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                      + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+        grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                      + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
+                      + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+      }
+    }
+  }
+
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[0] += abs(gradx[x][y]);
+        grad_s[1] += abs(grady[x][y]);
+
+        if (gmx < abs(gradx[x][y]))
+          gmx = abs(gradx[x][y]);
+        if (gmx < abs(grady[x][y]))
+          gmx = abs(grady[x][y]);
+      }
+    }
+  }
+
+  grad_s[0] = grad_s[0];
+  grad_s[1] = grad_s[1];
+
+  // calculate feature of CU sub-patrs
+
+  // horizon direction
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h / 2; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+      {
+        grad_s[2] += abs(gradx[x][y]);
+        grad_s[3] += abs(grady[x][y]);
+      }
+    }
+    for (int y = cu_h / 2; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+      {
+        grad_s[4] += abs(gradx[x][y]);
+        grad_s[5] += abs(grady[x][y]);
+      }
+    }
+  }
+  int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+  int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+
+  // Vertical direction
+
+  for (int y = 0; y < cu_h; y++)
+  {
+    for (int x = 0; x < cu_w / 2; x++)
+    {
+      if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[6] += abs(gradx[x][y]);
+        grad_s[7] += abs(grady[x][y]);
+      }
+    }
+    for (int x = cu_w / 2; x < cu_w; x++)
+    {
+      if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[8] += abs(gradx[x][y]);
+        grad_s[9] += abs(grady[x][y]);
+      }
+    }
+  }
+
+  int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+  int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+  if (w_over_h)
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = grad_s[0] / (cu_h * cu_w);
+    feature[2] = grad_s[1] / (cu_h * cu_w);
+    feature[3] = gmx;
+    feature[4] = 2 * dgardxh / (cu_h * cu_w);
+    feature[5] = 2 * dgardyh / (cu_h * cu_w);
+    feature[6] = 2 * dgardxv / (cu_h * cu_w);
+    feature[7] = 2 * dgardyv / (cu_h * cu_w);
+  }
+  else
+  {
+    feature[0] = cs.baseQP;
+    feature[2] = grad_s[0] / (cu_h * cu_w);
+    feature[1] = grad_s[1] / (cu_h * cu_w);
+    feature[3] = gmx;
+    feature[7] = 2 * dgardxh / (cu_h * cu_w);
+    feature[6] = 2 * dgardyh / (cu_h * cu_w);
+    feature[5] = 2 * dgardxv / (cu_h * cu_w);
+    feature[4] = 2 * dgardyv / (cu_h * cu_w);
+  }
+}
+
+void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h)
+{
+  int cu_w  = partitioner.currArea().lwidth();
+  int cu_h  = partitioner.currArea().lheight();
+  int pos_x = partitioner.currArea().lx();
+  int pos_y = partitioner.currArea().ly();
+
+  CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+  // calculate variance and gradient
+
+  int Gx_matrix[3][3];
+  int Gy_matrix[3][3];
+  // Sobel operator matrix for X axis
+  Gx_matrix[0][0] = -1;
+  Gx_matrix[1][0] = 0;
+  Gx_matrix[2][0] = 1;
+  Gx_matrix[0][1] = -2;
+  Gx_matrix[1][1] = 0;
+  Gx_matrix[2][1] = 2;
+  Gx_matrix[0][2] = -1;
+  Gx_matrix[1][2] = 0;
+  Gx_matrix[2][2] = 1;
+  // Sobel operator matrix for Y axis
+  Gy_matrix[0][0] = -1;
+  Gy_matrix[1][0] = -2;
+  Gy_matrix[2][0] = -1;
+  Gy_matrix[0][1] = 0;
+  Gy_matrix[1][1] = 0;
+  Gy_matrix[2][1] = 0;
+  Gy_matrix[0][2] = 1;
+  Gy_matrix[1][2] = 2;
+  Gy_matrix[2][2] = 1;
+
+  int gradx[64][64];
+  int grady[64][64];
+  int gmx = 0;
+
+  int var        = 0;
+  int grad_s[10] = { 0 };
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      var += orgLuma.at(x, y);
+
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                      + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                      + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+        grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                      + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
+                      + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+      }
+    }
+  }
+
+  int avg = var / (cu_h * cu_w);
+
+  var = 0;
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[0] += abs(gradx[x][y]);
+        grad_s[1] += abs(grady[x][y]);
+
+        if (gmx < abs(gradx[x][y]))
+          gmx = abs(gradx[x][y]);
+        if (gmx < abs(grady[x][y]))
+          gmx = abs(grady[x][y]);
+      }
+    }
+  }
+
+  grad_s[0] = grad_s[0];
+  grad_s[1] = grad_s[1];
+
+  // calculate feature of CU sub-patrs
+  int dgardxh = 0;
+  int dgardyh = 0;
+  int dgardxv = 0;
+  int dgardyv = 0;
+  
+  if (!w_over_h)
+  {// horizon direction
+    for (int x = 0; x < cu_w; x++)
+    {
+      for (int y = 0; y < cu_h / 2; y++)
+      {
+        if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+        {
+          grad_s[2] += abs(gradx[x][y]);
+          grad_s[3] += abs(grady[x][y]);
+        }
+      }
+      for (int y = cu_h / 2; y < cu_h; y++)
+      {
+        if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+        {
+          grad_s[4] += abs(gradx[x][y]);
+          grad_s[5] += abs(grady[x][y]);
+        }
+      }
+    }
+    dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+    dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+  }
+  else
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      for (int x = 0; x < cu_w / 2; x++)
+      {
+        if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+        {
+          grad_s[6] += abs(gradx[x][y]);
+          grad_s[7] += abs(grady[x][y]);
+        }
+      }
+      for (int x = cu_w / 2; x < cu_w; x++)
+      {
+        if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+        {
+          grad_s[8] += abs(gradx[x][y]);
+          grad_s[9] += abs(grady[x][y]);
+        }
+      }
+    }
+
+    dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+    dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+  }
+  // Vertical direction
+
+  
+  if (w_over_h)
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = var / (cu_h * cu_w);
+    feature[2] = grad_s[0] / (cu_h * cu_w);
+    feature[3] = grad_s[1] / (cu_h * cu_w);
+    feature[4] = gmx;
+    feature[5] = 2 * dgardxv / (cu_h * cu_w);
+    feature[6] = 2 * dgardyv / (cu_h * cu_w);
+  }
+  else
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = var / (cu_h * cu_w);
+    feature[3] = grad_s[0] / (cu_h * cu_w);
+    feature[2] = grad_s[1] / (cu_h * cu_w);
+    feature[4] = gmx;
+    feature[5] = 2 * dgardyh / (cu_h * cu_w);
+    feature[6] = 2 * dgardxh / (cu_h * cu_w);
+  }
+}
+
+#endif

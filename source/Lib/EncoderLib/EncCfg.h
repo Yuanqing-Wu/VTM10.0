@@ -49,6 +49,14 @@
 
 #include "EncCfgParam.h"
 
+#define svm 0
+
+#if svm
+#include "svm.h"
+#include <string>
+using namespace std;
+#endif
+
 using namespace EncCfgParam;
 
 #if JVET_O0756_CALCULATE_HDRMETRICS
@@ -795,10 +803,60 @@ protected:
 public:
   EncCfg()
   { 
+    #if svm
+    string model_path      = "E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\";
+    string s_ns_64x64_path = model_path + "s_ns_64x64.model";
+    string s_ns_32x32_path = model_path + "s_ns_32x32.model";
+    string s_ns_16x16_path = model_path + "s_ns_16x16.model";
+    string s_ns_8x8_path   = model_path + "s_ns_8x8.model";
+    string s_ns_32x16_path = model_path + "s_ns_32x16.model";
+    string s_ns_32x8_path  = model_path + "s_ns_32x8.model";
+    string s_ns_32x4_path  = model_path + "s_ns_32x4.model";
+    string s_ns_16x8_path  = model_path + "s_ns_16x8.model";
+    string s_ns_16x4_path  = model_path + "s_ns_16x4.model";
+    string s_ns_8x4_path   = model_path + "s_ns_8x4.model";
+
+    s_ns_64x64             = svm_load_model(s_ns_64x64_path.c_str());
+    s_ns_32x32             = svm_load_model(s_ns_32x32_path.c_str());
+    s_ns_16x16             = svm_load_model(s_ns_16x16_path.c_str());
+    s_ns_8x8               = svm_load_model(s_ns_8x8_path.c_str());
+    s_ns_32x16             = svm_load_model(s_ns_32x16_path.c_str());
+    s_ns_32x8              = svm_load_model(s_ns_32x8_path.c_str());
+    s_ns_32x4              = svm_load_model(s_ns_32x4_path.c_str());
+    s_ns_16x8              = svm_load_model(s_ns_16x8_path.c_str());
+    s_ns_16x4              = svm_load_model(s_ns_16x4_path.c_str());
+    s_ns_8x4               = svm_load_model(s_ns_8x4_path.c_str());
+    #endif
   }
 
   virtual ~EncCfg()
-  {}
+  { 
+    #if svm
+    svm_free_and_destroy_model(&s_ns_64x64);
+    svm_free_and_destroy_model(&s_ns_32x32);
+    svm_free_and_destroy_model(&s_ns_16x16);
+    svm_free_and_destroy_model(&s_ns_8x8);
+    svm_free_and_destroy_model(&s_ns_32x16);
+    svm_free_and_destroy_model(&s_ns_32x8);
+    svm_free_and_destroy_model(&s_ns_32x4);
+    svm_free_and_destroy_model(&s_ns_16x8);
+    svm_free_and_destroy_model(&s_ns_16x4);
+    svm_free_and_destroy_model(&s_ns_8x4);
+    #endif
+  }
+#if svm
+  struct svm_model *s_ns_64x64 = NULL;
+  struct svm_model *s_ns_32x32 = NULL;
+  struct svm_model *s_ns_16x16 = NULL;
+  struct svm_model *s_ns_8x8   = NULL;
+  struct svm_model *s_ns_32x16 = NULL;
+  struct svm_model *s_ns_32x8  = NULL;
+  struct svm_model *s_ns_32x4  = NULL;
+  struct svm_model *s_ns_16x8  = NULL;
+  struct svm_model *s_ns_16x4  = NULL;
+  struct svm_model *s_ns_8x4   = NULL;
+  #endif
+
 
   void setProfile(Profile::Name profile) { m_profile = profile; }
   void setLevel(Level::Tier tier, Level::Name level) { m_levelTier = tier; m_level = level; }
