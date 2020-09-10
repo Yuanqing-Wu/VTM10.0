@@ -49,7 +49,7 @@
 
 #include "EncCfgParam.h"
 
-#define svm 0
+#define svm 1
 
 #if svm
 #include "svm.h"
@@ -804,7 +804,7 @@ public:
   EncCfg()
   { 
     #if svm
-    string model_path      = "E:\\0-Research\\01-VVC\\Scripts-for-VVC\\vvc9data\\libsvmmodel\\";
+    string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
     string s_ns_64x64_path = model_path + "s_ns_64x64.model";
     string s_ns_32x32_path = model_path + "s_ns_32x32.model";
     string s_ns_16x16_path = model_path + "s_ns_16x16.model";

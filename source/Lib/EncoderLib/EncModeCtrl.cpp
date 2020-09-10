@@ -1260,6 +1260,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
     enum classifier_type
     {
+      no,
       sns_64x64,
       sns_32x32,
       sns_16x16,
@@ -1271,29 +1272,32 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       sns_16x4,
       sns_8x4,
     };
-    int classifier;
+    int classifier = no;
     int feature_num = 0;
 
-    if (cu_w == 64 && cu_h == 64)
-      classifier = sns_64x64;
-    else if (cu_w == 32 && cu_h == 32)
-      classifier = sns_32x32;
-    else if (cu_w == 16 && cu_h == 16)
-      classifier = sns_16x16;
-    else if (cu_w == 8 && cu_h == 8)
-      classifier = sns_8x8;
-    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
-      classifier = sns_32x16;
-    else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
-      classifier = sns_32x8;
-    else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
-      classifier = sns_32x4;
-    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
-      classifier = sns_16x8;
-    else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
-      classifier = sns_16x4;
-    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      classifier = sns_8x4;
+    // if (cu_w == 64 && cu_h == 64)
+    //   classifier = sns_64x64;
+    // else if (cu_w == 32 && cu_h == 32)
+    //   classifier = sns_32x32;
+    // else if (cu_w == 16 && cu_h == 16)
+    //   classifier = sns_16x16;
+    // else if (cu_w == 8 && cu_h == 8)
+    //   classifier = sns_8x8;
+    // else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+    //   classifier = sns_32x16;
+    // else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
+    //   classifier = sns_32x8;
+    // else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
+    //   classifier = sns_32x4;
+    // else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+    //   classifier = sns_16x8;
+    // else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
+    //   classifier = sns_16x4;
+    // else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+    //   classifier = sns_8x4;
+    if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+       classifier = sns_8x4;
+
 
     struct svm_model *model = NULL;
 
@@ -1359,24 +1363,29 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       feature_num = 7;
       break;
 
-    default: break;
+    default: 
+      classifier = no;
+      break;
     }
     
-    int max_feature_num = 10;
-    double *prob_estimates = NULL;    
-    struct svm_node *x = NULL;        
-
-    prob_estimates = (double *) malloc(2 * sizeof(double));
-    x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
-
-    for (int i = 0; i < feature_num; i++)
+    if(classifier)
     {
-      x[i].index = i + 1;
-      x[i].value = feature[i];
+      int max_feature_num = 10;
+      double *prob_estimates = NULL;    
+      struct svm_node *x = NULL;        
+
+      prob_estimates = (double *) malloc(2 * sizeof(double));
+      x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
+
+      for (int i = 0; i < feature_num; i++)
+      {
+        x[i].index = i + 1;
+        x[i].value = feature[i];
+      }
+      x[feature_num].index = -1;
+      sns_label = svm_predict_probability(model, x, prob_estimates);
+      //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
-    x[feature_num].index = -1;
-    sns_label = svm_predict_probability(model, x, prob_estimates);
-    //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
 
   }
 
@@ -2453,8 +2462,6 @@ void cal_feature(Partitioner &partitioner, const CodingStructure &cs, int *featu
 {
   int cu_w  = partitioner.currArea().lwidth();
   int cu_h  = partitioner.currArea().lheight();
-  int pos_x = partitioner.currArea().lx();
-  int pos_y = partitioner.currArea().ly();
 
   CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
 
@@ -2616,8 +2623,6 @@ void cal_feature_no_var(Partitioner &partitioner, const CodingStructure &cs, int
 {
   int cu_w  = partitioner.currArea().lwidth();
   int cu_h  = partitioner.currArea().lheight();
-  int pos_x = partitioner.currArea().lx();
-  int pos_y = partitioner.currArea().ly();
 
   CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
 
@@ -2770,8 +2775,6 @@ void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, 
 {
   int cu_w  = partitioner.currArea().lwidth();
   int cu_h  = partitioner.currArea().lheight();
-  int pos_x = partitioner.currArea().lx();
-  int pos_y = partitioner.currArea().ly();
 
   CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
 
