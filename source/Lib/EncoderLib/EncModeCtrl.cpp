@@ -1253,6 +1253,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64))))
   {
     int feature[20] = { 0 };  
+    double th = 0;
 
     bool w_over_h = true;
     if (cu_w < cu_h)
@@ -1295,8 +1296,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     //   classifier = sns_16x4;
     // else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
     //   classifier = sns_8x4;
-    if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-       classifier = sns_8x4;
+     if (cu_w == 8 && cu_h == 8)
+       classifier = sns_8x8;
 
 
     struct svm_model *model = NULL;
@@ -1307,60 +1308,70 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       cal_feature_no_var(partitioner, cs, feature, w_over_h); 
       model = m_pcEncCfg->s_ns_64x64;
       feature_num = 8;
+      th = 0.75;
       break;
 
     case sns_32x32:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x32;
       feature_num = 8;
+      th = 0.65;
       break;
 
     case sns_16x16:
       cal_feature(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x16;
       feature_num = 9;
+      th = 0.7;
       break;
 
     case sns_8x8:
       cal_feature(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x8;
       feature_num = 9;
+      th = 0.6;
       break;
 
     case sns_32x16:
       cal_feature(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x16;
       feature_num = 9;
+      th = 0.65;
       break;
 
     case sns_32x8:
       cal_feature(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x8;
       feature_num = 9;
+      th = 0.65;
       break;
 
     case sns_32x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x4;
       feature_num = 7;
+      th = 0.6;
       break;
 
     case sns_16x8:
       cal_feature(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x8;
       feature_num = 9;
+      th = 0.65;
       break;
 
     case sns_16x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x4;
       feature_num = 7;
+      th  = 0.65;
       break;
 
     case sns_8x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x4;
       feature_num = 7;
+      th = 0.6;
       break;
 
     default: 
@@ -1384,6 +1395,10 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       }
       x[feature_num].index = -1;
       sns_label = svm_predict_probability(model, x, prob_estimates);
+      if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
+      {        
+        sns_flag = true;
+      }
       //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
 
@@ -1392,7 +1407,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 #endif
 
 #if svm  
-  if (!cuECtx.get<bool>(QT_BEFORE_BT) && sns_label)
+  if (!cuECtx.get<bool>(QT_BEFORE_BT) && (sns_label || ! sns_flag))
   {
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
@@ -1400,7 +1415,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && sns_label)
+  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && (sns_label || ! sns_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1409,7 +1424,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && sns_label)
+  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && (sns_label || ! sns_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1421,7 +1436,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int minQPq = minQP;
   int maxQPq = maxQP;
   xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT );
-  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && sns_label)
+  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && (sns_label || ! sns_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1435,7 +1450,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_VERT_SPLIT, false );
   }
 
-  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && sns_label)
+  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && (sns_label || ! sns_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1449,7 +1464,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, false );
   }
 
-  if (cuECtx.get<bool>(QT_BEFORE_BT) && sns_label)
+  if (cuECtx.get<bool>(QT_BEFORE_BT) && (sns_label || ! sns_flag))
   {
     for( int qp = maxQPq; qp >= minQPq; qp-- )
     {
