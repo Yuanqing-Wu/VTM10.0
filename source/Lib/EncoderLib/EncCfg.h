@@ -805,43 +805,43 @@ public:
   { 
     #if svm
     string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
-    // string s_ns_64x64_path = model_path + "s_ns_64x64.model";
-    // string s_ns_32x32_path = model_path + "s_ns_32x32.model";
-    // string s_ns_16x16_path = model_path + "s_ns_16x16.model";
-     string s_ns_8x8_path   = model_path + "s_ns_8x8.model";
-    // string s_ns_32x16_path = model_path + "s_ns_32x16.model";
-    // string s_ns_32x8_path  = model_path + "s_ns_32x8.model";
-    // string s_ns_32x4_path  = model_path + "s_ns_32x4.model";
-    // string s_ns_16x8_path  = model_path + "s_ns_16x8.model";
-    // string s_ns_16x4_path  = model_path + "s_ns_16x4.model";
-    //string s_ns_8x4_path   = model_path + "s_ns_8x4.model";
+    string s_ns_64x64_path = model_path + "s_ns_64x64.model";
+    string s_ns_32x32_path = model_path + "s_ns_32x32.model";
+    string s_ns_16x16_path = model_path + "s_ns_16x16.model";
+    string s_ns_8x8_path   = model_path + "s_ns_8x8.model";
+    string s_ns_32x16_path = model_path + "s_ns_32x16.model";
+    string s_ns_32x8_path  = model_path + "s_ns_32x8.model";
+    string s_ns_32x4_path  = model_path + "s_ns_32x4.model";
+    string s_ns_16x8_path  = model_path + "s_ns_16x8.model";
+    string s_ns_16x4_path  = model_path + "s_ns_16x4.model";
+    string s_ns_8x4_path   = model_path + "s_ns_8x4.model";
 
-    // s_ns_64x64             = svm_load_model(s_ns_64x64_path.c_str());
-    // s_ns_32x32             = svm_load_model(s_ns_32x32_path.c_str());
-    // s_ns_16x16             = svm_load_model(s_ns_16x16_path.c_str());
-     s_ns_8x8               = svm_load_model(s_ns_8x8_path.c_str());
-    // s_ns_32x16             = svm_load_model(s_ns_32x16_path.c_str());
-    // s_ns_32x8              = svm_load_model(s_ns_32x8_path.c_str());
-    // s_ns_32x4              = svm_load_model(s_ns_32x4_path.c_str());
-    // s_ns_16x8              = svm_load_model(s_ns_16x8_path.c_str());
-    // s_ns_16x4              = svm_load_model(s_ns_16x4_path.c_str());
-    //s_ns_8x4               = svm_load_model(s_ns_8x4_path.c_str());
+    s_ns_64x64             = svm_load_model(s_ns_64x64_path.c_str());
+    s_ns_32x32             = svm_load_model(s_ns_32x32_path.c_str());
+    s_ns_16x16             = svm_load_model(s_ns_16x16_path.c_str());
+    s_ns_8x8               = svm_load_model(s_ns_8x8_path.c_str());
+    s_ns_32x16             = svm_load_model(s_ns_32x16_path.c_str());
+    s_ns_32x8              = svm_load_model(s_ns_32x8_path.c_str());
+    s_ns_32x4              = svm_load_model(s_ns_32x4_path.c_str());
+    s_ns_16x8              = svm_load_model(s_ns_16x8_path.c_str());
+    s_ns_16x4              = svm_load_model(s_ns_16x4_path.c_str());
+    s_ns_8x4               = svm_load_model(s_ns_8x4_path.c_str());
     #endif
   }
 
   virtual ~EncCfg()
   { 
     #if svm
-    // svm_free_and_destroy_model(&s_ns_64x64);
-    // svm_free_and_destroy_model(&s_ns_32x32);
-    // svm_free_and_destroy_model(&s_ns_16x16);
-     svm_free_and_destroy_model(&s_ns_8x8);
-    // svm_free_and_destroy_model(&s_ns_32x16);
-    // svm_free_and_destroy_model(&s_ns_32x8);
-    // svm_free_and_destroy_model(&s_ns_32x4);
-    // svm_free_and_destroy_model(&s_ns_16x8);
-    // svm_free_and_destroy_model(&s_ns_16x4);
-    //svm_free_and_destroy_model(&s_ns_8x4);
+    svm_free_and_destroy_model(&s_ns_64x64);
+    svm_free_and_destroy_model(&s_ns_32x32);
+    svm_free_and_destroy_model(&s_ns_16x16);
+    svm_free_and_destroy_model(&s_ns_8x8);
+    svm_free_and_destroy_model(&s_ns_32x16);
+    svm_free_and_destroy_model(&s_ns_32x8);
+    svm_free_and_destroy_model(&s_ns_32x4);
+    svm_free_and_destroy_model(&s_ns_16x8);
+    svm_free_and_destroy_model(&s_ns_16x4);
+    svm_free_and_destroy_model(&s_ns_8x4);
     #endif
   }
 #if svm

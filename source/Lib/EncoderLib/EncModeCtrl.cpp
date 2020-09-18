@@ -1247,10 +1247,15 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
   double sns_label = 1;
   bool   sns_flag  = false;
-  
 
-  if ((cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
-      && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64))))
+  bool canNo, canQt, canBh, canTh, canBv, canTv;
+  bool cansplit = true;
+  partitioner.canSplit(cs, canNo, canQt, canBh, canBv, canTh, canTv);
+  if (!canQt && !canBh && !canBv && !canTh && !canTv)
+    cansplit = false;
+
+  if ((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
+      && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64)))&& partitioner.currDepth < 6 && cansplit)
   {
     int feature[20] = { 0 };  
     double th = 0;
@@ -1276,28 +1281,26 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     int classifier = no;
     int feature_num = 0;
 
-    // if (cu_w == 64 && cu_h == 64)
-    //   classifier = sns_64x64;
-    // else if (cu_w == 32 && cu_h == 32)
-    //   classifier = sns_32x32;
-    // else if (cu_w == 16 && cu_h == 16)
-    //   classifier = sns_16x16;
-    // else if (cu_w == 8 && cu_h == 8)
-    //   classifier = sns_8x8;
-    // else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
-    //   classifier = sns_32x16;
-    // else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
-    //   classifier = sns_32x8;
-    // else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
-    //   classifier = sns_32x4;
-    // else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
-    //   classifier = sns_16x8;
-    // else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
-    //   classifier = sns_16x4;
-    // else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-    //   classifier = sns_8x4;
-     if (cu_w == 8 && cu_h == 8)
-       classifier = sns_8x8;
+    if (cu_w == 64 && cu_h == 64)
+      classifier = sns_64x64;
+    else if (cu_w == 32 && cu_h == 32)
+      classifier = sns_32x32;
+    else if (cu_w == 16 && cu_h == 16)
+      classifier = sns_16x16;
+    else if (cu_w == 8 && cu_h == 8)
+      classifier = sns_8x8;
+    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+      classifier = sns_32x16;
+    else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
+      classifier = sns_32x8;
+    else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
+      classifier = sns_32x4;
+    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+      classifier = sns_16x8;
+    else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
+      classifier = sns_16x4;
+    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+      classifier = sns_8x4;
 
 
     struct svm_model *model = NULL;
@@ -1319,28 +1322,28 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       break;
 
     case sns_16x16:
-      cal_feature(partitioner, cs, feature, w_over_h);
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x16;
       feature_num = 9;
       th = 0.7;
       break;
 
     case sns_8x8:
-      cal_feature(partitioner, cs, feature, w_over_h);
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x8;
       feature_num = 9;
       th = 0.6;
       break;
 
     case sns_32x16:
-      cal_feature(partitioner, cs, feature, w_over_h);
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x16;
       feature_num = 9;
       th = 0.65;
       break;
 
     case sns_32x8:
-      cal_feature(partitioner, cs, feature, w_over_h);
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x8;
       feature_num = 9;
       th = 0.65;
@@ -1354,7 +1357,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       break;
 
     case sns_16x8:
-      cal_feature(partitioner, cs, feature, w_over_h);
+      cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x8;
       feature_num = 9;
       th = 0.65;
@@ -1395,6 +1398,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       }
       x[feature_num].index = -1;
       sns_label = svm_predict_probability(model, x, prob_estimates);
+
+      th = 0;
       if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
       {        
         sns_flag = true;
@@ -2822,14 +2827,14 @@ void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, 
   int grady[64][64];
   int gmx = 0;
 
-  int var        = 0;
+  //int var        = 0;
   int grad_s[10] = { 0 };
 
   for (int x = 0; x < cu_w; x++)
   {
     for (int y = 0; y < cu_h; y++)
     {
-      var += orgLuma.at(x, y);
+      //var += orgLuma.at(x, y);
 
       if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
       {
@@ -2844,15 +2849,15 @@ void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, 
     }
   }
 
-  int avg = var / (cu_h * cu_w);
+ // int avg = var / (cu_h * cu_w);
 
-  var = 0;
+  //var = 0;
 
   for (int x = 0; x < cu_w; x++)
   {
     for (int y = 0; y < cu_h; y++)
     {
-      var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+      //var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
       if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
       {
         grad_s[0] += abs(gradx[x][y]);
@@ -2930,22 +2935,22 @@ void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, 
   if (w_over_h)
   {
     feature[0] = cs.baseQP;
-    feature[1] = var / (cu_h * cu_w);
-    feature[2] = grad_s[0] / (cu_h * cu_w);
-    feature[3] = grad_s[1] / (cu_h * cu_w);
-    feature[4] = gmx;
-    feature[5] = 2 * dgardxv / (cu_h * cu_w);
-    feature[6] = 2 * dgardyv / (cu_h * cu_w);
+    //feature[1] = var / (cu_h * cu_w);
+    feature[1] = grad_s[0] / (cu_h * cu_w);
+    feature[2] = grad_s[1] / (cu_h * cu_w);
+    feature[3] = gmx;
+    feature[4] = 2 * dgardxv / (cu_h * cu_w);
+    feature[5] = 2 * dgardyv / (cu_h * cu_w);
   }
   else
   {
     feature[0] = cs.baseQP;
-    feature[1] = var / (cu_h * cu_w);
-    feature[3] = grad_s[0] / (cu_h * cu_w);
-    feature[2] = grad_s[1] / (cu_h * cu_w);
-    feature[4] = gmx;
-    feature[5] = 2 * dgardyh / (cu_h * cu_w);
-    feature[6] = 2 * dgardxh / (cu_h * cu_w);
+    //feature[1] = var / (cu_h * cu_w);
+    feature[2] = grad_s[0] / (cu_h * cu_w);
+    feature[1] = grad_s[1] / (cu_h * cu_w);
+    feature[3] = gmx;
+    feature[4] = 2 * dgardyh / (cu_h * cu_w);
+    feature[5] = 2 * dgardxh / (cu_h * cu_w);
   }
 }
 
