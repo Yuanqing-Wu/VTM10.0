@@ -1281,7 +1281,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     int classifier = no;
     int feature_num = 0;
 
-    if (cu_w == 64 && cu_h == 64)
+    /* if (cu_w == 64 && cu_h == 64)
       classifier = sns_64x64;
     else if (cu_w == 32 && cu_h == 32)
       classifier = sns_32x32;
@@ -1300,7 +1300,9 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
       classifier = sns_16x4;
     else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      classifier = sns_8x4;
+      classifier = sns_8x4; */
+    //if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+      //classifier = sns_8x4;
 
 
     struct svm_model *model = NULL;
@@ -1311,70 +1313,70 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       cal_feature_no_var(partitioner, cs, feature, w_over_h); 
       model = m_pcEncCfg->s_ns_64x64;
       feature_num = 8;
-      th = 0.75;
+      th = 0.55;
       break;
 
     case sns_32x32:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x32;
       feature_num = 8;
-      th = 0.65;
+      th = 0.64;
       break;
 
     case sns_16x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x16;
       feature_num = 9;
-      th = 0.7;
+      th = 0.60;
       break;
 
     case sns_8x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x8;
       feature_num = 9;
-      th = 0.6;
+      th = 0.62;
       break;
 
     case sns_32x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x16;
       feature_num = 9;
-      th = 0.65;
+      th = 0.64;
       break;
 
     case sns_32x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x8;
       feature_num = 9;
-      th = 0.65;
+      th = 0.53;
       break;
 
     case sns_32x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x4;
       feature_num = 7;
-      th = 0.6;
+      th = 0.51;
       break;
 
     case sns_16x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x8;
       feature_num = 9;
-      th = 0.65;
+      th = 0.525;
       break;
 
     case sns_16x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x4;
       feature_num = 7;
-      th  = 0.65;
+      th  = 0.54;
       break;
 
     case sns_8x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x4;
       feature_num = 7;
-      th = 0.6;
+      th = 0.84;
       break;
 
     default: 
@@ -1399,7 +1401,6 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       x[feature_num].index = -1;
       sns_label = svm_predict_probability(model, x, prob_estimates);
 
-      th = 0;
       if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
       {        
         sns_flag = true;
