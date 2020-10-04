@@ -1246,7 +1246,9 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int pos_y = partitioner.currArea().ly();
 
   double sns_label = 1;
+  double hsvs_label = 1;
   bool   sns_flag  = false;
+  bool   hsvs_flag = false;
 
   bool canNo, canQt, canBh, canTh, canBv, canTv;
   bool cansplit = true;
@@ -1267,6 +1269,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     enum classifier_type
     {
       no,
+
       sns_64x64,
       sns_32x32,
       sns_16x16,
@@ -1277,114 +1280,139 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       sns_16x8,
       sns_16x4,
       sns_8x4,
+
+      hsvs_32x32,
+      hsvs_32x16,
+      hsvs_32x8,
+      hsvs_16x16,
+      hsvs_16x8,
+      hsvs_8x8,
     };
-    int classifier = no;
+    int sns_classifier = no;
+    int hsvs_classifier = no;
     int feature_num = 0;
 
-    /* if (cu_w == 64 && cu_h == 64)
-      classifier = sns_64x64;
+    if (cu_w == 64 && cu_h == 64)
+      sns_classifier = sns_64x64;
     else if (cu_w == 32 && cu_h == 32)
-      classifier = sns_32x32;
+    {
+      sns_classifier = sns_32x32;
+      hsvs_classifier = hsvs_32x32;
+    }
     else if (cu_w == 16 && cu_h == 16)
-      classifier = sns_16x16;
+    {
+      sns_classifier = sns_16x16;
+      hsvs_classifier = hsvs_16x16;
+    }
     else if (cu_w == 8 && cu_h == 8)
-      classifier = sns_8x8;
+    {
+      sns_classifier = sns_8x8;
+      hsvs_classifier = hsvs_8x8;
+    }
     else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
-      classifier = sns_32x16;
+    {
+      sns_classifier = sns_32x16;
+      hsvs_classifier = hsvs_32x16;
+    }
     else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
-      classifier = sns_32x8;
+    {
+      sns_classifier = sns_32x8;
+      hsvs_classifier = hsvs_32x8;
+    }
     else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
-      classifier = sns_32x4;
+      sns_classifier = sns_32x4;
     else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
-      classifier = sns_16x8;
+    {
+      sns_classifier = sns_16x8;
+      hsvs_classifier = hsvs_16x8;
+    }
     else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
-      classifier = sns_16x4;
+      sns_classifier = sns_16x4;
     else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      classifier = sns_8x4; */
-    //if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      //classifier = sns_8x4;
+      sns_classifier = sns_8x4; 
+    
 
 
     struct svm_model *model = NULL;
 
-    switch (classifier)
+    switch (sns_classifier)
     {
     case sns_64x64: 
       cal_feature_no_var(partitioner, cs, feature, w_over_h); 
-      model = m_pcEncCfg->s_ns_64x64;
+      model = m_pcEncCfg->s_ns_64x64_model;
       feature_num = 8;
       th = 0.55;
       break;
 
     case sns_32x32:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x32;
+      model       = m_pcEncCfg->s_ns_32x32_model;
       feature_num = 8;
       th = 0.64;
       break;
 
     case sns_16x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x16;
+      model       = m_pcEncCfg->s_ns_16x16_model;
       feature_num = 9;
       th = 0.60;
       break;
 
     case sns_8x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_8x8;
+      model       = m_pcEncCfg->s_ns_8x8_model;
       feature_num = 9;
       th = 0.62;
       break;
 
     case sns_32x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x16;
+      model       = m_pcEncCfg->s_ns_32x16_model;
       feature_num = 9;
       th = 0.64;
       break;
 
     case sns_32x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x8;
+      model       = m_pcEncCfg->s_ns_32x8_model;
       feature_num = 9;
       th = 0.53;
       break;
 
     case sns_32x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x4;
+      model       = m_pcEncCfg->s_ns_32x4_model;
       feature_num = 7;
       th = 0.51;
       break;
 
     case sns_16x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x8;
+      model       = m_pcEncCfg->s_ns_16x8_model;
       feature_num = 9;
       th = 0.525;
       break;
 
     case sns_16x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x4;
+      model       = m_pcEncCfg->s_ns_16x4_model;
       feature_num = 7;
       th  = 0.54;
       break;
 
     case sns_8x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_8x4;
+      model       = m_pcEncCfg->s_ns_8x4_model;
       feature_num = 7;
       th = 0.84;
       break;
 
     default: 
-      classifier = no;
+      sns_classifier = no;
       break;
     }
     
-    if(classifier)
+    if(sns_classifier)
     {
       int max_feature_num = 10;
       double *prob_estimates = NULL;    
@@ -1406,6 +1434,81 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
         sns_flag = true;
       }
       //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+    }
+
+    if((canBh && canBv)|| (canTh && canTv) && ((sns_label&&sns_flag)||(sns_classifier&&!sns_flag)))
+    {
+
+      switch (hsvs_classifier)
+      {
+      case hsvs_32x32:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_32x32_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+      
+      case hsvs_32x16:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_32x16_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+
+      case hsvs_32x8:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_32x8_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+      
+      case hsvs_16x16:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_16x16_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+      
+      case hsvs_16x8:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_16x8_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+      
+      case hsvs_8x8:
+        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+        model       = m_pcEncCfg->hs_vs_8x8_model;
+        feature_num = 7;
+        th  = 0.54;
+        break;
+      
+      default:
+        break;
+      }
+      if(hsvs_classifier)
+      {
+        int max_feature_num = 10;
+        double *prob_estimates = NULL;    
+        struct svm_node *x = NULL;        
+
+        prob_estimates = (double *) malloc(2 * sizeof(double));
+        x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
+
+        for (int i = 0; i < feature_num; i++)
+        {
+          x[i].index = i + 1;
+          x[i].value = feature[i];
+        }
+        x[feature_num].index = -1;
+        hsvs_label = svm_predict_probability(model, x, prob_estimates);
+
+        if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
+        {        
+          hsvs_flag = true;
+        }
+        //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+        }
     }
 
   }

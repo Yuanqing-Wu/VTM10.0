@@ -52,6 +52,33 @@
 #define svm 1
 
 #if svm
+  #define s_ns  1
+  #define hs_vs 1
+#endif
+
+#if s_ns
+  #define s_ns_64x64   1
+  #define s_ns_32x32   1
+  #define s_ns_16x16   1
+  #define s_ns_8x8     1
+  #define s_ns_32x16   1
+  #define s_ns_32x8    1
+  #define s_ns_32x4    1
+  #define s_ns_16x8    1
+  #define s_ns_16x4    1
+  #define s_ns_8x4     1
+#endif
+
+#if hs_vs
+  #define hs_vs_32x32  1
+  #define hs_vs_32x16  1
+  #define hs_vs_32x8   1
+  #define hs_vs_16x16  1
+  #define hs_vs_16x8   1
+  #define hs_vs_8x8    1
+#endif
+
+#if svm
 #include "svm.h"
 #include <string>
 using namespace std;
@@ -805,56 +832,223 @@ public:
   { 
     #if svm
     string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
-    //string s_ns_64x64_path = model_path + "s_ns_64x64.model";
-    // string s_ns_32x32_path = model_path + "s_ns_32x32.model";
-    // string s_ns_16x16_path = model_path + "s_ns_16x16.model";
-    // string s_ns_8x8_path   = model_path + "s_ns_8x8.model";
-    // string s_ns_32x16_path = model_path + "s_ns_32x16.model";
-    // string s_ns_32x8_path  = model_path + "s_ns_32x8.model";
-    // string s_ns_32x4_path  = model_path + "s_ns_32x4.model";
-    // string s_ns_16x8_path  = model_path + "s_ns_16x8.model";
-    // string s_ns_16x4_path  = model_path + "s_ns_16x4.model";
-    // string s_ns_8x4_path   = model_path + "s_ns_8x4.model";
+      #if s_ns_64x64
+        string s_ns_64x64_path = model_path + "s_ns_64x64.model";
+        s_ns_64x64_model             = svm_load_model(s_ns_64x64_path.c_str());
+      #endif
 
-    //s_ns_64x64             = svm_load_model(s_ns_64x64_path.c_str());
-    //s_ns_32x32             = svm_load_model(s_ns_32x32_path.c_str());
-    // s_ns_16x16             = svm_load_model(s_ns_16x16_path.c_str());
-    // s_ns_8x8               = svm_load_model(s_ns_8x8_path.c_str());
-    // s_ns_32x16             = svm_load_model(s_ns_32x16_path.c_str());
-    // s_ns_32x8              = svm_load_model(s_ns_32x8_path.c_str());
-    // s_ns_32x4              = svm_load_model(s_ns_32x4_path.c_str());
-    // s_ns_16x8              = svm_load_model(s_ns_16x8_path.c_str());
-    // s_ns_16x4              = svm_load_model(s_ns_16x4_path.c_str());
-    // s_ns_8x4               = svm_load_model(s_ns_8x4_path.c_str()); 
+      #if s_ns_32x32
+        string s_ns_32x32_path = model_path + "s_ns_32x32.model";
+        s_ns_32x32_model             = svm_load_model(s_ns_32x32_path.c_str());
+      #endif
+
+      #if s_ns_16x16
+        string s_ns_16x16_path = model_path + "s_ns_16x16.model";
+        s_ns_16x16_model             = svm_load_model(s_ns_16x16_path.c_str());
+      #endif
+
+      #if s_ns_8x8
+        string s_ns_8x8_path   = model_path + "s_ns_8x8.model";
+        s_ns_8x8_model               = svm_load_model(s_ns_8x8_path.c_str());
+      #endif
+
+      #if s_ns_32x16
+        string s_ns_32x16_path = model_path + "s_ns_32x16.model";
+        s_ns_32x16_model             = svm_load_model(s_ns_32x16_path.c_str());
+      #endif
+
+      #if s_ns_32x8
+        string s_ns_32x8_path  = model_path + "s_ns_32x8.model";
+        s_ns_32x8_model              = svm_load_model(s_ns_32x8_path.c_str());
+      #endif
+
+      #if s_ns_32x4
+        string s_ns_32x4_path  = model_path + "s_ns_32x4.model";
+        s_ns_32x4_model              = svm_load_model(s_ns_32x4_path.c_str());
+      #endif
+
+      #if s_ns_16x8
+        string s_ns_16x8_path  = model_path + "s_ns_16x8.model";
+        s_ns_16x8_model              = svm_load_model(s_ns_16x8_path.c_str());
+      #endif
+
+      #if s_ns_16x4
+        string s_ns_16x4_path  = model_path + "s_ns_16x4.model";
+        s_ns_16x4_model              = svm_load_model(s_ns_16x4_path.c_str());
+      #endif
+
+      #if s_ns_8x4
+        string s_ns_8x4_path   = model_path + "s_ns_8x4.model";
+        s_ns_8x4_model               = svm_load_model(s_ns_8x4_path.c_str()); 
+      #endif
+
+      #if hs_vs_32x32
+        string hs_vs_32x32_path   = model_path + "s_ns_32x32.model";
+        hs_vs_32x32_model               = svm_load_model(hs_vs_32x32_path.c_str()); 
+      #endif
+
+      #if hs_vs_32x16
+        string hs_vs_32x16_path   = model_path + "s_ns_32x16.model";
+        hs_vs_32x16_model               = svm_load_model(hs_vs_32x16_path.c_str()); 
+      #endif
+
+      #if hs_vs_32x8
+        string hs_vs_32x8_path   = model_path + "s_ns_32x8.model";
+        hs_vs_32x8_model               = svm_load_model(hs_vs_32x8_path.c_str()); 
+      #endif
+
+      #if hs_vs_16x16
+        string hs_vs_16x16_path   = model_path + "s_ns_16x16.model";
+        hs_vs_16x16_model               = svm_load_model(hs_vs_16x16_path.c_str()); 
+      #endif
+
+      #if hs_vs_16x8
+        string hs_vs_16x8_path   = model_path + "s_ns_16x8.model";
+        hs_vs_16x8_model               = svm_load_model(hs_vs_16x8_path.c_str()); 
+      #endif
+
+      #if hs_vs_8x8
+        string hs_vs_8x8_path   = model_path + "s_ns_8x8.model";
+        hs_vs_8x8_model               = svm_load_model(hs_vs_8x8_path.c_str()); 
+      #endif
     #endif
   }
 
   virtual ~EncCfg()
   { 
     #if svm
-    //svm_free_and_destroy_model(&s_ns_64x64);
-    // svm_free_and_destroy_model(&s_ns_32x32);
-    // svm_free_and_destroy_model(&s_ns_16x16);
-    // svm_free_and_destroy_model(&s_ns_8x8);
-    // svm_free_and_destroy_model(&s_ns_32x16);
-    // svm_free_and_destroy_model(&s_ns_32x8);
-    // svm_free_and_destroy_model(&s_ns_32x4);
-    // svm_free_and_destroy_model(&s_ns_16x8);
-    // svm_free_and_destroy_model(&s_ns_16x4);
-    // svm_free_and_destroy_model(&s_ns_8x4);
+
+      #if s_ns_64x64
+        svm_free_and_destroy_model(&s_ns_64x64_model);
+      #endif
+
+      #if s_ns_32x32
+        svm_free_and_destroy_model(&s_ns_32x32_model);
+      #endif
+
+      #if s_ns_16x16
+        svm_free_and_destroy_model(&s_ns_16x16_model);
+      #endif
+
+      #if s_ns_8x8
+        svm_free_and_destroy_model(&s_ns_8x8_model);
+      #endif
+
+      #if s_ns_32x16
+        svm_free_and_destroy_model(&s_ns_32x16_model);
+      #endif
+
+      #if s_ns_32x8
+        svm_free_and_destroy_model(&s_ns_32x8_model);
+      #endif
+
+      #if s_ns_32x4
+        svm_free_and_destroy_model(&s_ns_32x4_model);
+      #endif
+
+      #if s_ns_16x8
+        svm_free_and_destroy_model(&s_ns_16x8_model);
+      #endif
+
+      #if s_ns_16x4
+        svm_free_and_destroy_model(&s_ns_16x4_model);
+      #endif
+
+      #if s_ns_8x4
+        svm_free_and_destroy_model(&s_ns_8x4_model); 
+      #endif
+
+      #if hs_vs_32x32
+        svm_free_and_destroy_model(&hs_vs_32x32_model);
+      #endif
+
+      #if hs_vs_32x16
+        svm_free_and_destroy_model(&hs_vs_32x16_model);
+      #endif
+
+      #if hs_vs_32x8
+        svm_free_and_destroy_model(&hs_vs_32x8_model);
+      #endif
+
+      #if hs_vs_16x16
+        svm_free_and_destroy_model(&hs_vs_16x16_model);
+      #endif
+
+      #if hs_vs_16x8
+        svm_free_and_destroy_model(&hs_vs_16x8_model);
+      #endif
+
+      #if hs_vs_8x8
+        svm_free_and_destroy_model(&hs_vs_8x8_model);
+      #endif
     #endif
   }
 #if svm
-  struct svm_model *s_ns_64x64 = NULL;
-  struct svm_model *s_ns_32x32 = NULL;
-  struct svm_model *s_ns_16x16 = NULL;
-  struct svm_model *s_ns_8x8   = NULL;
-  struct svm_model *s_ns_32x16 = NULL;
-  struct svm_model *s_ns_32x8  = NULL;
-  struct svm_model *s_ns_32x4  = NULL;
-  struct svm_model *s_ns_16x8  = NULL;
-  struct svm_model *s_ns_16x4  = NULL;
-  struct svm_model *s_ns_8x4   = NULL;
+ 
+      #if s_ns_64x64
+        struct svm_model *s_ns_64x64_model = NULL;
+      #endif
+
+      #if s_ns_32x32
+        struct svm_model *s_ns_32x32_model = NULL;
+      #endif
+
+      #if s_ns_16x16
+        struct svm_model *s_ns_16x16_model = NULL;
+      #endif
+
+      #if s_ns_8x8
+        struct svm_model *s_ns_8x8_model   = NULL;
+      #endif
+
+      #if s_ns_32x16
+        struct svm_model *s_ns_32x16_model = NULL;
+      #endif
+
+      #if s_ns_32x8
+        struct svm_model *s_ns_32x8_model  = NULL;
+      #endif
+
+      #if s_ns_32x4
+        struct svm_model *s_ns_32x4_model  = NULL;
+      #endif
+
+      #if s_ns_16x8
+        struct svm_model *s_ns_16x8_model  = NULL;
+      #endif
+
+      #if s_ns_16x4
+        struct svm_model *s_ns_16x4_model  = NULL;
+      #endif
+
+      #if s_ns_8x4
+        struct svm_model *s_ns_8x4_model   = NULL;
+      #endif
+
+      #if hs_vs_32x32
+        struct svm_model *hs_vs_32x32_model   = NULL;
+      #endif
+
+      #if hs_vs_32x16
+        struct svm_model *hs_vs_32x16_model   = NULL;
+      #endif
+
+      #if hs_vs_32x8
+        struct svm_model *hs_vs_32x8_model   = NULL;
+      #endif
+
+      #if hs_vs_16x16
+        struct svm_model *hs_vs_16x16_model   = NULL;
+      #endif
+
+      #if hs_vs_16x8
+        struct svm_model *hs_vs_16x8_model   = NULL;
+      #endif
+
+      #if hs_vs_8x8
+        struct svm_model *hs_vs_8x8_model   = NULL;
+      #endif
+        
   #endif
 
 
