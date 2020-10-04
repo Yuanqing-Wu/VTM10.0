@@ -61,6 +61,7 @@
 void cal_feature(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
 void cal_feature_no_var(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
 void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
+void cal_feature_hsvs(Partitioner &partitioner, const CodingStructure &cs, int *feature, bool w_over_h);
 #endif
 
 void EncModeCtrl::init( EncCfg *pCfg, RateCtrl *pRateCtrl, RdCost* pRdCost )
@@ -1247,8 +1248,12 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
   double sns_label = 1;
   double hsvs_label = 1;
+
   bool   sns_flag  = false;
   bool   hsvs_flag = false;
+  bool   hs_flag      = false;
+  bool   vs_flag      = false;
+  bool   sns_rdo_flag = false;
 
   bool canNo, canQt, canBh, canTh, canBv, canTv;
   bool cansplit = true;
@@ -1331,7 +1336,9 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
       sns_classifier = sns_8x4; 
     
-
+    #if s_ns == 0
+      sns_classifier = no;
+    #endif
 
     struct svm_model *model = NULL;
 
@@ -1429,65 +1436,61 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       x[feature_num].index = -1;
       sns_label = svm_predict_probability(model, x, prob_estimates);
 
-      if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
-      {        
+      if ((prob_estimates[0] > th) || (prob_estimates[0] < (1 - th)))
+      {
         sns_flag = true;
       }
+      else
+        sns_rdo_flag = true;
       //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
 
-    if((canBh && canBv)|| (canTh && canTv) && ((sns_label&&sns_flag)||(sns_classifier&&!sns_flag)))
+    #if hs_vs == 0
+      hsvs_classifier = no;
+    #endif
+    if ((canBh && canBv) || (canTh && canTv) && (!s_ns || (s_ns && ((sns_label && sns_flag) || sns_rdo_flag))))
     {
-
       switch (hsvs_classifier)
       {
       case hsvs_32x32:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_32x32_model;
-        feature_num = 7;
         th  = 0.54;
         break;
       
       case hsvs_32x16:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_32x16_model;
-        feature_num = 7;
         th  = 0.54;
         break;
 
       case hsvs_32x8:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_32x8_model;
-        feature_num = 7;
         th  = 0.54;
         break;
       
       case hsvs_16x16:
         cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_16x16_model;
-        feature_num = 7;
         th  = 0.54;
         break;
       
       case hsvs_16x8:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_16x8_model;
-        feature_num = 7;
         th  = 0.54;
         break;
       
       case hsvs_8x8:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
         model       = m_pcEncCfg->hs_vs_8x8_model;
-        feature_num = 7;
         th  = 0.54;
         break;
       
       default:
         break;
       }
+      th = 0.1;
       if(hsvs_classifier)
       {
+        cal_feature_hsvs(partitioner, cs, feature, w_over_h);
+        feature_num = 5;
         int max_feature_num = 10;
         double *prob_estimates = NULL;    
         struct svm_node *x = NULL;        
@@ -1503,11 +1506,17 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
         x[feature_num].index = -1;
         hsvs_label = svm_predict_probability(model, x, prob_estimates);
 
+        if (hsvs_label == 100)
+          hs_flag = true;
+        else
+          vs_flag = true;
+
+
         if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
         {        
           hsvs_flag = true;
         }
-        //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+        //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, hsvs_label, prob_estimates[0], prob_estimates[1]);
         }
     }
 
@@ -1524,7 +1533,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && (sns_label || ! sns_flag))
+  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && (sns_label || !sns_flag) && (vs_flag || !hsvs_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1533,7 +1542,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && (sns_label || ! sns_flag))
+  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && (sns_label || !sns_flag) && (hs_flag || !hsvs_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1545,7 +1554,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int minQPq = minQP;
   int maxQPq = maxQP;
   xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT );
-  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && (sns_label || ! sns_flag))
+  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && (sns_label || !sns_flag) && (vs_flag || !hsvs_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1559,7 +1568,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_VERT_SPLIT, false );
   }
 
-  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && (sns_label || ! sns_flag))
+  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && (sns_label || !sns_flag) && (hs_flag || !hsvs_flag))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -3056,6 +3065,151 @@ void cal_feature_no_splith(Partitioner &partitioner, const CodingStructure &cs, 
     feature[4] = 2 * dgardyh / (cu_h * cu_w);
     feature[5] = 2 * dgardxh / (cu_h * cu_w);
   }
+}
+
+void cal_feature_hsvs(Partitioner& partitioner, const CodingStructure& cs, int* feature, bool w_over_h) 
+{
+  int cu_w = partitioner.currArea().lwidth();
+  int cu_h = partitioner.currArea().lheight();
+
+  CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+  // calculate variance and gradient
+
+  int Gx_matrix[3][3];
+  int Gy_matrix[3][3];
+  // Sobel operator matrix for X axis
+  Gx_matrix[0][0] = -1;
+  Gx_matrix[1][0] = 0;
+  Gx_matrix[2][0] = 1;
+  Gx_matrix[0][1] = -2;
+  Gx_matrix[1][1] = 0;
+  Gx_matrix[2][1] = 2;
+  Gx_matrix[0][2] = -1;
+  Gx_matrix[1][2] = 0;
+  Gx_matrix[2][2] = 1;
+  // Sobel operator matrix for Y axis
+  Gy_matrix[0][0] = -1;
+  Gy_matrix[1][0] = -2;
+  Gy_matrix[2][0] = -1;
+  Gy_matrix[0][1] = 0;
+  Gy_matrix[1][1] = 0;
+  Gy_matrix[2][1] = 0;
+  Gy_matrix[0][2] = 1;
+  Gy_matrix[1][2] = 2;
+  Gy_matrix[2][2] = 1;
+
+  int gradx[64][64];
+  int grady[64][64];
+  int gmx = 0;
+
+  int grad_s[10] = { 0 };
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        gradx[x][y] = Gx_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gx_matrix[2][0] * orgLuma.at(x + 1, y - 1)
+                      + Gx_matrix[0][1] * orgLuma.at(x - 1, y) + Gx_matrix[2][1] * orgLuma.at(x + 1, y)
+                      + Gx_matrix[0][2] * orgLuma.at(x - 1, y + 1) + Gx_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+
+        grady[x][y] = Gy_matrix[0][0] * orgLuma.at(x - 1, y - 1) + Gy_matrix[1][0] * orgLuma.at(x, y - 1)
+                      + Gy_matrix[2][0] * orgLuma.at(x + 1, y - 1) + Gy_matrix[0][2] * orgLuma.at(x - 1, y + 1)
+                      + Gy_matrix[1][2] * orgLuma.at(x, y + 1) + Gy_matrix[2][2] * orgLuma.at(x + 1, y + 1);
+      }
+    }
+  }
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[0] += abs(gradx[x][y]);
+        grad_s[1] += abs(grady[x][y]);
+
+        if (gmx < abs(gradx[x][y]))
+          gmx = abs(gradx[x][y]);
+        if (gmx < abs(grady[x][y]))
+          gmx = abs(grady[x][y]);
+      }
+    }
+  }
+
+  grad_s[0] = grad_s[0];
+  grad_s[1] = grad_s[1];
+
+  // calculate feature of CU sub-patrs
+
+  // horizon direction
+
+  for (int x = 0; x < cu_w; x++)
+  {
+    for (int y = 0; y < cu_h / 2; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > 0 && y < (cu_h / 2 - 1))
+      {
+        grad_s[2] += abs(gradx[x][y]);
+        grad_s[3] += abs(grady[x][y]);
+      }
+    }
+    for (int y = cu_h / 2; y < cu_h; y++)
+    {
+      if (x > 0 && x < (cu_w - 1) && y > cu_h / 2 && y < (cu_h - 1))
+      {
+        grad_s[4] += abs(gradx[x][y]);
+        grad_s[5] += abs(grady[x][y]);
+      }
+    }
+  }
+  int dgardxh = 2 * abs(grad_s[2] - grad_s[4]);
+  int dgardyh = 2 * abs(grad_s[3] - grad_s[5]);
+
+  // Vertical direction
+
+  for (int y = 0; y < cu_h; y++)
+  {
+    for (int x = 0; x < cu_w / 2; x++)
+    {
+      if (x > 0 && x < (cu_w / 2 - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[6] += abs(gradx[x][y]);
+        grad_s[7] += abs(grady[x][y]);
+      }
+    }
+    for (int x = cu_w / 2; x < cu_w; x++)
+    {
+      if (x > cu_w / 2 && x < (cu_w - 1) && y > 0 && y < (cu_h - 1))
+      {
+        grad_s[8] += abs(gradx[x][y]);
+        grad_s[9] += abs(grady[x][y]);
+      }
+    }
+  }
+
+  int dgardxv = 2 * abs(grad_s[6] - grad_s[8]);
+  int dgardyv = 2 * abs(grad_s[7] - grad_s[9]);
+
+  if (w_over_h)
+  {
+    feature[0] = cs.baseQP;
+    feature[1] = grad_s[0] / (cu_h * cu_w);
+    feature[2] = grad_s[1] / (cu_h * cu_w);
+    feature[4] = 2 * dgardxh / (cu_h * cu_w) - 2 * dgardxv / (cu_h * cu_w);
+    feature[5] = 2 * dgardyh / (cu_h * cu_w) - 2 * dgardyv / (cu_h * cu_w);
+  }
+  else
+  {
+    feature[0] = cs.baseQP;
+    feature[2] = grad_s[0] / (cu_h * cu_w);
+    feature[1] = grad_s[1] / (cu_h * cu_w);
+    feature[5] = 2 * dgardxv / (cu_h * cu_w) - 2 * dgardxh / (cu_h * cu_w);
+    feature[4] = 2 * dgardyv / (cu_h * cu_w) - 2 * dgardyh / (cu_h * cu_w);
+  }
+
 }
 
 #endif
