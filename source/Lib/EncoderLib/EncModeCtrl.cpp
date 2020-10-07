@@ -1361,56 +1361,56 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     case sns_16x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x16_model;
-      feature_num = 9;
+      feature_num = 8;
       th = 0.60;
       break;
 
     case sns_8x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x8_model;
-      feature_num = 9;
+      feature_num = 8;
       th = 0.62;
       break;
 
     case sns_32x16:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x16_model;
-      feature_num = 9;
+      feature_num = 8;
       th = 0.64;
       break;
 
     case sns_32x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x8_model;
-      feature_num = 9;
+      feature_num = 8;
       th = 0.53;
       break;
 
     case sns_32x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_32x4_model;
-      feature_num = 7;
+      feature_num = 6;
       th = 0.51;
       break;
 
     case sns_16x8:
       cal_feature_no_var(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x8_model;
-      feature_num = 9;
+      feature_num = 8;
       th = 0.525;
       break;
 
     case sns_16x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_16x4_model;
-      feature_num = 7;
+      feature_num = 6;
       th  = 0.54;
       break;
 
     case sns_8x4:
       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
       model       = m_pcEncCfg->s_ns_8x4_model;
-      feature_num = 7;
+      feature_num = 6;
       th = 0.84;
       break;
 
@@ -1419,6 +1419,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       break;
     }
     
+    th = 0.1;
     if(sns_classifier)
     {
       int max_feature_num = 10;
@@ -1448,7 +1449,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     #if hs_vs == 0
       hsvs_classifier = no;
     #endif
-    if ((canBh && canBv) || (canTh && canTv) && (!s_ns || (s_ns && ((sns_label && sns_flag) || sns_rdo_flag))))
+    if (((canBh && canBv) || (canTh && canTv))&&((!s_ns) ||(s_ns&&((sns_label&&sns_flag)||sns_rdo_flag))))
     {
       switch (hsvs_classifier)
       {
@@ -1525,7 +1526,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 #endif
 
 #if svm  
-  if (!cuECtx.get<bool>(QT_BEFORE_BT) && (sns_label || ! sns_flag))
+  if (!cuECtx.get<bool>(QT_BEFORE_BT))
   {
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
@@ -1582,7 +1583,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, false );
   }
 
-  if (cuECtx.get<bool>(QT_BEFORE_BT) && (sns_label || ! sns_flag))
+  if (cuECtx.get<bool>(QT_BEFORE_BT))
   {
     for( int qp = maxQPq; qp >= minQPq; qp-- )
     {

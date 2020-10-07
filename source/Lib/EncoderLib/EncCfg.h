@@ -52,8 +52,8 @@
 #define svm 1
 
 #if svm
-  #define s_ns  0
-  #define hs_vs 1
+  #define s_ns  1
+  #define hs_vs 0
 #endif
 
 #if s_ns
@@ -831,8 +831,8 @@ public:
   EncCfg()
   { 
     #if svm
-    //string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
-    string model_path = "E:\\0-Research\\01-VVC\\VTM_10_0_svm\\libsvmmodel\\";
+    string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
+    //string model_path = "E:\\0-Research\\01-VVC\\VTM_10_0_svm\\libsvmmodel\\";
       #if s_ns_64x64
         string s_ns_64x64_path = model_path + "s_ns_64x64.txt";
         s_ns_64x64_model             = svm_load_model(s_ns_64x64_path.c_str());
