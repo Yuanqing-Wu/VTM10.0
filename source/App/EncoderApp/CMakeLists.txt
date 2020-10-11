@@ -91,5 +91,5 @@ endif()
 source_group( "Natvis Files" FILES ${NATVIS_FILES} )
 
 # set the folder where to place the projects
-set_target_properties( ${EXE_NAME}  PROPERTIES FOLDER app LINKER_LANGUAGE CXX )
+set_target_properties(${EXE_NAME}  PROPERTIES FOLDER app LINKER_LANGUAGE CXX )
 

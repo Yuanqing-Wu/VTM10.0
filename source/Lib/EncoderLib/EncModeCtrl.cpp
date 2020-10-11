@@ -1245,7 +1245,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int cu_h  = partitioner.currArea().lheight();
   int pos_x = partitioner.currArea().lx();
   int pos_y = partitioner.currArea().ly();
-
+ 
   double sns_label = 1;
   double hsvs_label = 1;
 
@@ -1254,6 +1254,42 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   bool   hs_flag      = false;
   bool   vs_flag      = false;
   bool   sns_rdo_flag = false;
+
+  // if((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w == 32 && cu_h == 32))
+  // {
+  // CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+
+  // for (int x = 0; x < cu_w; x++)
+  // {
+  //   for (int y = 0; y < cu_h; y++)
+  //   {
+  //     var += orgLuma.at(x, y);
+  //   }
+  // }
+
+  // int avg = var / (cu_h * cu_w);
+
+  // var = 0;
+
+  // for (int x = 0; x < cu_w; x++)
+  // {
+  //   for (int y = 0; y < cu_h; y++)
+  //   {
+  //     var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
+  //   }
+  // }
+  // var = var/1024;
+  // sns_flag = true;
+  // if(var<1000)
+  // {
+  //   sns_label = 0;  
+  // }
+  // else
+  // {
+  //    sns_flag = false; 
+  // }
+  
+  // }
 
   bool canNo, canQt, canBh, canTh, canBv, canTv;
   bool cansplit = true;
@@ -1335,6 +1371,11 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       sns_classifier = sns_16x4;
     else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
       sns_classifier = sns_8x4; 
+
+    // if (cu_w == 8 && cu_h == 8)
+    //   sns_classifier = sns_8x8;
+    // else
+    //   sns_classifier = no;
     
     #if s_ns == 0
       sns_classifier = no;
@@ -1443,7 +1484,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
       }
       else
         sns_rdo_flag = true;
-      //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+      //if (cu_w == 32 && cu_h == 32)
+      //printf("%d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
 
     #if hs_vs == 0
@@ -1506,18 +1548,19 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
         }
         x[feature_num].index = -1;
         hsvs_label = svm_predict_probability(model, x, prob_estimates);
-
-        if (hsvs_label == 100)
+        if(hsvs_label == 100)
           hs_flag = true;
         else
           vs_flag = true;
-
+          
 
         if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
         {        
           hsvs_flag = true;
         }
-        //printf_s("%d,%d,%d,%d,%f,%f,%f\n", pos_x, pos_y, cu_w, cu_h, hsvs_label, prob_estimates[0], prob_estimates[1]);
+
+        //if (cu_w == 32 && cu_h == 32)
+        //printf("%d,%d,%d,%d,%d,%g,%g\n", pos_x, pos_y, cu_w, cu_h, vs_flag, prob_estimates[0], prob_estimates[1]);
         }
     }
 
@@ -1525,8 +1568,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 
 #endif
 
-#if svm  
-  if (!cuECtx.get<bool>(QT_BEFORE_BT))
+#if svm   //&& (sns_label || !sns_flag)
+  if (!cuECtx.get<bool>(QT_BEFORE_BT) )
   {
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
@@ -1583,7 +1626,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_HORZ_SPLIT, false );
   }
 
-  if (cuECtx.get<bool>(QT_BEFORE_BT))
+  if (cuECtx.get<bool>(QT_BEFORE_BT)) // && (sns_label || !sns_flag) 
   {
     for( int qp = maxQPq; qp >= minQPq; qp-- )
     {
@@ -1690,8 +1733,8 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
 #endif
     // add intra modes
-    #if svm
-    if (tryIntraRdo && (!sns_label||!sns_flag))
+    #if svm   // 
+    if (tryIntraRdo&& (!sns_label||!sns_flag))
     #else
     if (tryIntraRdo)
     #endif
@@ -3199,16 +3242,16 @@ void cal_feature_hsvs(Partitioner& partitioner, const CodingStructure& cs, int* 
     feature[0] = cs.baseQP;
     feature[1] = grad_s[0] / (cu_h * cu_w);
     feature[2] = grad_s[1] / (cu_h * cu_w);
-    feature[4] = 2 * dgardxh / (cu_h * cu_w) - 2 * dgardxv / (cu_h * cu_w);
-    feature[5] = 2 * dgardyh / (cu_h * cu_w) - 2 * dgardyv / (cu_h * cu_w);
+    feature[3] = 2 * dgardxh / (cu_h * cu_w) - 2 * dgardxv / (cu_h * cu_w);
+    feature[4] = 2 * dgardyh / (cu_h * cu_w) - 2 * dgardyv / (cu_h * cu_w);
   }
   else
   {
     feature[0] = cs.baseQP;
     feature[2] = grad_s[0] / (cu_h * cu_w);
     feature[1] = grad_s[1] / (cu_h * cu_w);
-    feature[5] = 2 * dgardxv / (cu_h * cu_w) - 2 * dgardxh / (cu_h * cu_w);
-    feature[4] = 2 * dgardyv / (cu_h * cu_w) - 2 * dgardyh / (cu_h * cu_w);
+    feature[4] = 2 * dgardxv / (cu_h * cu_w) - 2 * dgardxh / (cu_h * cu_w);
+    feature[3] = 2 * dgardyv / (cu_h * cu_w) - 2 * dgardyh / (cu_h * cu_w);
   }
 
 }
