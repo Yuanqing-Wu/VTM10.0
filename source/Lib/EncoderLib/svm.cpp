@@ -9,6 +9,7 @@
 #include <locale.h>
 #include "svm.h"
 int libsvm_version = LIBSVM_VERSION;
+int SvmTime = 0;
 typedef float Qfloat;
 typedef signed char schar;
 #ifndef min

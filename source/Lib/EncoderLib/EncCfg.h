@@ -48,6 +48,7 @@
 #include "CommonLib/Unit.h"
 
 #include "EncCfgParam.h"
+#include <chrono>
 
 #define svm 1
 
@@ -89,6 +90,7 @@ using namespace EncCfgParam;
 #if JVET_O0756_CALCULATE_HDRMETRICS
 #include "HDRLib/inc/DistortionMetric.H"
 #endif
+
 
 struct GOPEntry
 {
@@ -831,6 +833,7 @@ public:
   EncCfg()
   { 
     #if svm
+    auto startTime  = std::chrono::steady_clock::now();
     string model_path      = "/home/medialab-313/wgq//VTM10.0/libsvmmodel/";
     //string model_path = "E:\\0-Research\\01-VVC\\VTM_10_0_svm\\libsvmmodel\\";
       #if s_ns_64x64
@@ -912,13 +915,16 @@ public:
         string hs_vs_8x8_path   = model_path + "hs_vs_8x8.txt";
         hs_vs_8x8_model               = svm_load_model(hs_vs_8x8_path.c_str()); 
       #endif
+      auto endTime = std::chrono::steady_clock::now();
+    SvmTime += std::chrono::duration_cast<std::chrono::microseconds>( endTime - startTime).count();
     #endif
   }
 
   virtual ~EncCfg()
   { 
+    
     #if svm
-
+      auto startTime  = std::chrono::steady_clock::now();
       #if s_ns_64x64
         svm_free_and_destroy_model(&s_ns_64x64_model);
       #endif
@@ -982,7 +988,12 @@ public:
       #if hs_vs_8x8
         svm_free_and_destroy_model(&hs_vs_8x8_model);
       #endif
+    auto endTime = std::chrono::steady_clock::now();
+    SvmTime += std::chrono::duration_cast<std::chrono::microseconds>( endTime - startTime).count();
+    printf("SVM Time: %12.3f\n", SvmTime/1000000.0);
     #endif
+
+    
   }
 #if svm
       struct svm_model *s_ns_64x64_model = NULL;

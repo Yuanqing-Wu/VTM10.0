@@ -47,6 +47,7 @@
 #include "CommonLib/UnitTools.h"
 
 #include "CommonLib/dtrace_next.h"
+#include <chrono>
 
 #include <cmath>
 
@@ -1239,345 +1240,344 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   //////////////////////////////////////////////////////////////////////////
   // Add unit split modes
 
-  #if svm
+  // #if svm
+  // auto startTime  = std::chrono::steady_clock::now();
 
-  int cu_w  = partitioner.currArea().lwidth();
-  int cu_h  = partitioner.currArea().lheight();
-  int pos_x = partitioner.currArea().lx();
-  int pos_y = partitioner.currArea().ly();
+
+  // int cu_w  = partitioner.currArea().lwidth();
+  // int cu_h  = partitioner.currArea().lheight();
+  // int pos_x = partitioner.currArea().lx();
+  // int pos_y = partitioner.currArea().ly();
  
-  double sns_label = 1;
-  double hsvs_label = 1;
+  // double sns_label = 1;
+  // double hsvs_label = 1;
 
-  bool   sns_flag  = false;
-  bool   hsvs_flag = false;
-  bool   hs_flag      = false;
-  bool   vs_flag      = false;
-  bool   sns_rdo_flag = false;
+  // bool   sns_flag  = false;
+  // bool   hsvs_flag = false;
+  // bool   hs_flag      = false;
+  // bool   vs_flag      = false;
+  // bool   sns_rdo_flag = false;
 
-  // if((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w == 32 && cu_h == 32))
-  // {
-  // CPelBuf orgLuma = cs.picture->getTrueOrigBuf(partitioner.currArea().blocks[COMPONENT_Y]);
+  // bool canNo, canQt, canBh, canTh, canBv, canTv;
+  // bool cansplit = true;
+  // partitioner.canSplit(cs, canNo, canQt, canBh, canBv, canTh, canTv);
+  // if (!canQt && !canBh && !canBv && !canTh && !canTv)
+  //   cansplit = false;
 
-  // for (int x = 0; x < cu_w; x++)
-  // {
-  //   for (int y = 0; y < cu_h; y++)
-  //   {
-  //     var += orgLuma.at(x, y);
-  //   }
-  // }
+//   if ((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
+//       && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64)))&& partitioner.currDepth < 6 && cansplit)
+//   {
+//     int feature[20] = { 0 };  
+//     double th = 0;
 
-  // int avg = var / (cu_h * cu_w);
+//     bool w_over_h = true;
+//     if (cu_w < cu_h)
+//       w_over_h = false;
 
-  // var = 0;
+//     enum classifier_type
+//     {
+//       no,
 
-  // for (int x = 0; x < cu_w; x++)
-  // {
-  //   for (int y = 0; y < cu_h; y++)
-  //   {
-  //     var += (orgLuma.at(x, y) - avg) * (orgLuma.at(x, y) - avg);
-  //   }
-  // }
-  // var = var/1024;
-  // sns_flag = true;
-  // if(var<1000)
-  // {
-  //   sns_label = 0;  
-  // }
-  // else
-  // {
-  //    sns_flag = false; 
-  // }
+//       sns_64x64,
+//       sns_32x32,
+//       sns_16x16,
+//       sns_8x8,
+//       sns_32x16,
+//       sns_32x8,
+//       sns_32x4,
+//       sns_16x8,
+//       sns_16x4,
+//       sns_8x4,
+
+//       hsvs_32x32,
+//       hsvs_32x16,
+//       hsvs_32x8,
+//       hsvs_16x16,
+//       hsvs_16x8,
+//       hsvs_8x8,
+//     };
+//     int sns_classifier = no;
+//     int hsvs_classifier = no;
+//     int feature_num = 0;
+
+//     // if (cu_w == 64 && cu_h == 64)
+//     //   sns_classifier = sns_64x64;
+//     // else if (cu_w == 32 && cu_h == 32)
+//     // {
+//     //   sns_classifier = sns_32x32;
+//     //   hsvs_classifier = hsvs_32x32;
+//     // }
+//     // else if (cu_w == 16 && cu_h == 16)
+//     // {
+//     //   sns_classifier = sns_16x16;
+//     //   hsvs_classifier = hsvs_16x16;
+//     // }
+//     // else if (cu_w == 8 && cu_h == 8)
+//     // {
+//     //   sns_classifier = sns_8x8;
+//     //   hsvs_classifier = hsvs_8x8;
+//     // }
+//     // else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+//     // {
+//     //   sns_classifier = sns_32x16;
+//     //   hsvs_classifier = hsvs_32x16;
+//     // }
+//     // else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
+//     // {
+//     //   sns_classifier = sns_32x8;
+//     //   hsvs_classifier = hsvs_32x8;
+//     // }
+//     // else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
+//     //   sns_classifier = sns_32x4;
+//     // else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+//     // {
+//     //   sns_classifier = sns_16x8;
+//     //   hsvs_classifier = hsvs_16x8;
+//     // }
+//     // else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
+//     //   sns_classifier = sns_16x4;
+//     // else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+//     //   sns_classifier = sns_8x4; 
+
+    
+//     if (cu_w == 32 && cu_h == 32)
+//        sns_classifier = sns_32x32;
+//     // else if (cu_w == 16 && cu_h == 16)
+//     // {
+//     //   sns_classifier = sns_16x16;
+//     //   hsvs_classifier = hsvs_16x16;
+//     // }
+//     // else if (cu_w == 8 && cu_h == 8)
+//     // {
+//     //   sns_classifier = sns_8x8;
+//     //   hsvs_classifier = hsvs_8x8;
+//     // }
+//     // else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+//     // {
+//     //   sns_classifier = sns_32x16;
+//     //   hsvs_classifier = hsvs_32x16;
+//     // }
+//     // else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
+//     // {
+//     //   sns_classifier = sns_32x8;
+//     //   hsvs_classifier = hsvs_32x8;
+//     // }
+//     // else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+//     // {
+//     //   sns_classifier = sns_16x8;
+//     //   hsvs_classifier = hsvs_16x8;
+//     // }
   
-  // }
-
-  bool canNo, canQt, canBh, canTh, canBv, canTv;
-  bool cansplit = true;
-  partitioner.canSplit(cs, canNo, canQt, canBh, canBv, canTh, canTv);
-  if (!canQt && !canBh && !canBv && !canTh && !canTv)
-    cansplit = false;
-
-  if ((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < cs.picture->lwidth()
-      && (cu_h + pos_y) < cs.picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64)))&& partitioner.currDepth < 6 && cansplit)
-  {
-    int feature[20] = { 0 };  
-    double th = 0;
-
-    bool w_over_h = true;
-    if (cu_w < cu_h)
-      w_over_h = false;
-
-    enum classifier_type
-    {
-      no,
-
-      sns_64x64,
-      sns_32x32,
-      sns_16x16,
-      sns_8x8,
-      sns_32x16,
-      sns_32x8,
-      sns_32x4,
-      sns_16x8,
-      sns_16x4,
-      sns_8x4,
-
-      hsvs_32x32,
-      hsvs_32x16,
-      hsvs_32x8,
-      hsvs_16x16,
-      hsvs_16x8,
-      hsvs_8x8,
-    };
-    int sns_classifier = no;
-    int hsvs_classifier = no;
-    int feature_num = 0;
-
-    if (cu_w == 64 && cu_h == 64)
-      sns_classifier = sns_64x64;
-    else if (cu_w == 32 && cu_h == 32)
-    {
-      sns_classifier = sns_32x32;
-      hsvs_classifier = hsvs_32x32;
-    }
-    else if (cu_w == 16 && cu_h == 16)
-    {
-      sns_classifier = sns_16x16;
-      hsvs_classifier = hsvs_16x16;
-    }
-    else if (cu_w == 8 && cu_h == 8)
-    {
-      sns_classifier = sns_8x8;
-      hsvs_classifier = hsvs_8x8;
-    }
-    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
-    {
-      sns_classifier = sns_32x16;
-      hsvs_classifier = hsvs_32x16;
-    }
-    else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
-    {
-      sns_classifier = sns_32x8;
-      hsvs_classifier = hsvs_32x8;
-    }
-    else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
-      sns_classifier = sns_32x4;
-    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
-    {
-      sns_classifier = sns_16x8;
-      hsvs_classifier = hsvs_16x8;
-    }
-    else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
-      sns_classifier = sns_16x4;
-    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      sns_classifier = sns_8x4; 
-
-    // if (cu_w == 8 && cu_h == 8)
-    //   sns_classifier = sns_8x8;
-    // else
-    //   sns_classifier = no;
     
-    #if s_ns == 0
-      sns_classifier = no;
-    #endif
+//     #if s_ns == 0
+//       sns_classifier = no;
+//     #endif
 
-    struct svm_model *model = NULL;
+//     struct svm_model *model = NULL;
 
-    switch (sns_classifier)
-    {
-    case sns_64x64: 
-      cal_feature_no_var(partitioner, cs, feature, w_over_h); 
-      model = m_pcEncCfg->s_ns_64x64_model;
-      feature_num = 8;
-      th = 0.55;
-      break;
+//     switch (sns_classifier)
+//     {
+//     case sns_64x64: 
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h); 
+//       model = m_pcEncCfg->s_ns_64x64_model;
+//       feature_num = 8;
+//       th = 0.5;
+//       break;
 
-    case sns_32x32:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x32_model;
-      feature_num = 8;
-      th = 0.64;
-      break;
+//     case sns_32x32:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_32x32_model;
+//       feature_num = 8;
+//       th = 0.5;
+//       break;
 
-    case sns_16x16:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x16_model;
-      feature_num = 8;
-      th = 0.60;
-      break;
+//     case sns_16x16:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_16x16_model;
+//       feature_num = 8;
+//       //th = 0.71;
+//       th = 0.81;
+//       break;
 
-    case sns_8x8:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_8x8_model;
-      feature_num = 8;
-      th = 0.62;
-      break;
+//     case sns_8x8:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_8x8_model;
+//       feature_num = 8;
+//       //th = 0.62;
+//       th = 0.69;
+//       break;
 
-    case sns_32x16:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x16_model;
-      feature_num = 8;
-      th = 0.64;
-      break;
+//     case sns_32x16:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_32x16_model;
+//       feature_num = 8;
+//       //th = 0.63;
+//       th = 0.71;
+//       break;
 
-    case sns_32x8:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x8_model;
-      feature_num = 8;
-      th = 0.53;
-      break;
+//     case sns_32x8:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_32x8_model;
+//       feature_num = 8;
+//       //th = 0.64;
+//       th = 0.70;
+//       break;
 
-    case sns_32x4:
-      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_32x4_model;
-      feature_num = 6;
-      th = 0.51;
-      break;
+//     case sns_32x4:
+//       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_32x4_model;
+//       feature_num = 6;
+//       th = 0.68;
+//       break;
 
-    case sns_16x8:
-      cal_feature_no_var(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x8_model;
-      feature_num = 8;
-      th = 0.525;
-      break;
+//     case sns_16x8:
+//       cal_feature_no_var(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_16x8_model;
+//       feature_num = 8;
+//       //th = 0.55;
+//       th = 0.56;
+//       break;
 
-    case sns_16x4:
-      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_16x4_model;
-      feature_num = 6;
-      th  = 0.54;
-      break;
+//     case sns_16x4:
+//       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_16x4_model;
+//       feature_num = 6;
+//       th  = 0.54;
+//       break;
 
-    case sns_8x4:
-      cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-      model       = m_pcEncCfg->s_ns_8x4_model;
-      feature_num = 6;
-      th = 0.84;
-      break;
+//     case sns_8x4:
+//       cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+//       model       = m_pcEncCfg->s_ns_8x4_model;
+//       feature_num = 6;
+//       th = 0.81;
+//       break;
 
-    default: 
-      sns_classifier = no;
-      break;
-    }
+//     default: 
+//       sns_classifier = no;
+//       break;
+//     }
     
-    th = 0.1;
-    if(sns_classifier)
-    {
-      int max_feature_num = 10;
-      double *prob_estimates = NULL;    
-      struct svm_node *x = NULL;        
+//     //th = 0.1;
+//     if(sns_classifier)
+//     {
+//       int max_feature_num = 10;
+//       double *prob_estimates = NULL;    
+//       struct svm_node *x = NULL;        
 
-      prob_estimates = (double *) malloc(2 * sizeof(double));
-      x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
+//       prob_estimates = (double *) malloc(2 * sizeof(double));
+//       x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
 
-      for (int i = 0; i < feature_num; i++)
-      {
-        x[i].index = i + 1;
-        x[i].value = feature[i];
-      }
-      x[feature_num].index = -1;
-      sns_label = svm_predict_probability(model, x, prob_estimates);
+//       for (int i = 0; i < feature_num; i++)
+//       {
+//         x[i].index = i + 1;
+//         x[i].value = feature[i];
+//       }
+//       x[feature_num].index = -1;
+//       sns_label = svm_predict_probability(model, x, prob_estimates);
 
-      if ((prob_estimates[0] > th) || (prob_estimates[0] < (1 - th)))
-      {
-        sns_flag = true;
-      }
-      else
-        sns_rdo_flag = true;
-      //if (cu_w == 32 && cu_h == 32)
-      //printf("%d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
-    }
+//       if ((prob_estimates[0] >= th) || (prob_estimates[0] < (1 - th)))
+//       {
+//         sns_flag = true;
+//       }
+//       else
+//         sns_rdo_flag = true;
+//       //if (cu_w == 32 && cu_h == 32)
+//       printf("%d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+//     }
 
-    #if hs_vs == 0
-      hsvs_classifier = no;
-    #endif
-    if (((canBh && canBv) || (canTh && canTv))&&((!s_ns) ||(s_ns&&((sns_label&&sns_flag)||sns_rdo_flag))))
-    {
-      switch (hsvs_classifier)
-      {
-      case hsvs_32x32:
-        model       = m_pcEncCfg->hs_vs_32x32_model;
-        th  = 0.54;
-        break;
+//     #if hs_vs == 0
+//       hsvs_classifier = no;
+//     #endif
+//     if (((canBh && canBv) || (canTh && canTv))&&((!s_ns) ||(s_ns&&((sns_label&&sns_flag)||sns_rdo_flag))))
+//     {
+//       switch (hsvs_classifier)
+//       {
+//       case hsvs_32x32:
+//         model       = m_pcEncCfg->hs_vs_32x32_model;
+//         th  = 0.515;
+//         break;
       
-      case hsvs_32x16:
-        model       = m_pcEncCfg->hs_vs_32x16_model;
-        th  = 0.54;
-        break;
+//       case hsvs_32x16:
+//         model       = m_pcEncCfg->hs_vs_32x16_model;
+//         th  = 0.51;
+//         break;
 
-      case hsvs_32x8:
-        model       = m_pcEncCfg->hs_vs_32x8_model;
-        th  = 0.54;
-        break;
+//       case hsvs_32x8:
+//         model       = m_pcEncCfg->hs_vs_32x8_model;
+//         th  = 0.53;
+//         break;
       
-      case hsvs_16x16:
-        cal_feature_no_splith(partitioner, cs, feature, w_over_h);
-        model       = m_pcEncCfg->hs_vs_16x16_model;
-        th  = 0.54;
-        break;
+//       case hsvs_16x16:
+//         cal_feature_no_splith(partitioner, cs, feature, w_over_h);
+//         model       = m_pcEncCfg->hs_vs_16x16_model;
+//         th  = 0.56;
+//         break;
       
-      case hsvs_16x8:
-        model       = m_pcEncCfg->hs_vs_16x8_model;
-        th  = 0.54;
-        break;
+//       case hsvs_16x8:
+//         model       = m_pcEncCfg->hs_vs_16x8_model;
+//         th  = 0.58;
+//         break;
       
-      case hsvs_8x8:
-        model       = m_pcEncCfg->hs_vs_8x8_model;
-        th  = 0.54;
-        break;
+//       case hsvs_8x8:
+//         model       = m_pcEncCfg->hs_vs_8x8_model;
+//         th  = 0.63;
+//         break;
       
-      default:
-        break;
-      }
-      th = 0.1;
-      if(hsvs_classifier)
-      {
-        cal_feature_hsvs(partitioner, cs, feature, w_over_h);
-        feature_num = 5;
-        int max_feature_num = 10;
-        double *prob_estimates = NULL;    
-        struct svm_node *x = NULL;        
+//       default:
+//         break;
+//       }
+//       //th = 0.1;
+//       if(hsvs_classifier)
+//       {
+//         cal_feature_hsvs(partitioner, cs, feature, w_over_h);
+//         feature_num = 5;
+//         int max_feature_num = 10;
+//         double *prob_estimates = NULL;    
+//         struct svm_node *x = NULL;        
 
-        prob_estimates = (double *) malloc(2 * sizeof(double));
-        x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
+//         prob_estimates = (double *) malloc(2 * sizeof(double));
+//         x = (struct svm_node *) realloc(x, max_feature_num * sizeof(struct svm_node));   // allocate memory for x
 
-        for (int i = 0; i < feature_num; i++)
-        {
-          x[i].index = i + 1;
-          x[i].value = feature[i];
-        }
-        x[feature_num].index = -1;
-        hsvs_label = svm_predict_probability(model, x, prob_estimates);
-        if(hsvs_label == 100)
-          hs_flag = true;
-        else
-          vs_flag = true;
+//         for (int i = 0; i < feature_num; i++)
+//         {
+//           x[i].index = i + 1;
+//           x[i].value = feature[i];
+//         }
+//         x[feature_num].index = -1;
+//         hsvs_label = svm_predict_probability(model, x, prob_estimates);
+//         if(hsvs_label == 100)
+//           hs_flag = true;
+//         else
+//           vs_flag = true;
           
 
-        if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
-        {        
-          hsvs_flag = true;
-        }
+//         if((prob_estimates[0] > th) || (prob_estimates[0] < (1-th)))
+//         {        
+//           hsvs_flag = true;
+//         }
 
-        //if (cu_w == 32 && cu_h == 32)
-        //printf("%d,%d,%d,%d,%d,%g,%g\n", pos_x, pos_y, cu_w, cu_h, vs_flag, prob_estimates[0], prob_estimates[1]);
-        }
-    }
+//         //if (cu_w == 32 && cu_h == 32)
+//         //printf("%d,%d,%d,%d,%d,%g,%g\n", pos_x, pos_y, cu_w, cu_h, vs_flag, prob_estimates[0], prob_estimates[1]);
+//         }
+//     }
 
-  }
+//   }
 
-#endif
+//   auto endTime = std::chrono::steady_clock::now();
+//   SvmTime += std::chrono::duration_cast<std::chrono::microseconds>( endTime - startTime).count();
+
+// #endif
 
 #if svm   //&& (sns_label || !sns_flag)
-  if (!cuECtx.get<bool>(QT_BEFORE_BT) )
+  if (!cuECtx.get<bool>(QT_BEFORE_BT))
   {
     for( int qp = maxQP; qp >= minQP; qp-- )
     {
       m_ComprCUCtxList.back().testModes.push_back( { ETM_SPLIT_QT, ETO_STANDARD, qp } );
     }
   }
-
-  if (partitioner.canSplit(CU_TRIV_SPLIT, cs) && (sns_label || !sns_flag) && (vs_flag || !hsvs_flag))
+  // && (sns_label || !sns_flag) && (vs_flag || !hsvs_flag)
+  if (partitioner.canSplit(CU_TRIV_SPLIT, cs))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1586,7 +1586,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     }
   }
 
-  if (partitioner.canSplit(CU_TRIH_SPLIT, cs) && (sns_label || !sns_flag) && (hs_flag || !hsvs_flag))
+  if (partitioner.canSplit(CU_TRIH_SPLIT, cs))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1598,7 +1598,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
   int minQPq = minQP;
   int maxQPq = maxQP;
   xGetMinMaxQP( minQP, maxQP, cs, partitioner, baseQP, *cs.sps, *cs.pps, CU_BT_SPLIT );
-  if (partitioner.canSplit(CU_VERT_SPLIT, cs) && (sns_label || !sns_flag) && (vs_flag || !hsvs_flag))
+  if (partitioner.canSplit(CU_VERT_SPLIT, cs))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1612,7 +1612,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
     m_ComprCUCtxList.back().set( DID_VERT_SPLIT, false );
   }
 
-  if (partitioner.canSplit(CU_HORZ_SPLIT, cs) && (sns_label || !sns_flag) && (hs_flag || !hsvs_flag))
+  if (partitioner.canSplit(CU_HORZ_SPLIT, cs))
   {
     // add split modes
     for( int qp = maxQP; qp >= minQP; qp-- )
@@ -1734,7 +1734,7 @@ void EncModeCtrlMTnoRQT::initCULevel( Partitioner &partitioner, const CodingStru
 #endif
     // add intra modes
     #if svm   // 
-    if (tryIntraRdo&& (!sns_label||!sns_flag))
+    if (tryIntraRdo)
     #else
     if (tryIntraRdo)
     #endif
