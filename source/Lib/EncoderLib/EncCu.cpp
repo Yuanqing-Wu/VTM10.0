@@ -705,9 +705,14 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
   bool   vs_flag      = false;
   bool   sns_rdo_flag = false;
 
+  bool canNo, canQt, canBh, canTh, canBv, canTv;
+  bool cansplit = true;
+  partitioner.canSplit(*tempCS, canNo, canQt, canBh, canBv, canTh, canTv);
+  if (!canQt && !canBh && !canBv && !canTh && !canTv)
+    cansplit = false;
 
-  if ((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) < tempCS->picture->lwidth()
-      && (cu_h + pos_y) < tempCS->picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64)))&& partitioner.currDepth < 6)
+  if ((partitioner.chType == CHANNEL_TYPE_LUMA) && (cu_w > 4 || cu_h > 4) && cu_w < 128 && (cu_w + pos_x) <= tempCS->picture->lwidth()
+      && (cu_h + pos_y) <= tempCS->picture->lheight() && !(((cu_w == 64) && (cu_h != 64)) || ((cu_w != 64) && (cu_h == 64)))&& partitioner.currDepth < 6 &&cansplit)
   {
     int feature[20] = { 0 };  
     double th = 0;
@@ -742,48 +747,13 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     int hsvs_classifier = no;
     int feature_num = 0;
 
-    if (cu_w == 64 && cu_h == 64)
-      sns_classifier = sns_64x64;
-    else if (cu_w == 32 && cu_h == 32)
-    {
-      sns_classifier = sns_32x32;
-      hsvs_classifier = hsvs_32x32;
-    }
-    else if (cu_w == 16 && cu_h == 16)
-    {
-      sns_classifier = sns_16x16;
-      hsvs_classifier = hsvs_16x16;
-    }
-    else if (cu_w == 8 && cu_h == 8)
-    {
-      sns_classifier = sns_8x8;
-      hsvs_classifier = hsvs_8x8;
-    }
-    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
-    {
-      sns_classifier = sns_32x16;
-      hsvs_classifier = hsvs_32x16;
-    }
-    else if ((cu_w == 32 && cu_h == 8) || ( cu_w == 8 && cu_h == 32))
-    {
-      sns_classifier = sns_32x8;
-      hsvs_classifier = hsvs_32x8;
-    }
-    else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
-      sns_classifier = sns_32x4;
-    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
-    {
-      sns_classifier = sns_16x8;
-      hsvs_classifier = hsvs_16x8;
-    }
-    else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
-      sns_classifier = sns_16x4;
-    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-      sns_classifier = sns_8x4; 
-
-    
-    //if (cu_w == 32 && cu_h == 32)
-      // sns_classifier = sns_32x32;
+    // if (cu_w == 64 && cu_h == 64)
+    //   sns_classifier = sns_64x64;
+    // else if (cu_w == 32 && cu_h == 32)
+    // {
+    //   sns_classifier = sns_32x32;
+    //   hsvs_classifier = hsvs_32x32;
+    // }
     // else if (cu_w == 16 && cu_h == 16)
     // {
     //   sns_classifier = sns_16x16;
@@ -804,12 +774,46 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     //   sns_classifier = sns_32x8;
     //   hsvs_classifier = hsvs_32x8;
     // }
+    // else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
+    //   sns_classifier = sns_32x4;
     // else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
     // {
     //   sns_classifier = sns_16x8;
     //   hsvs_classifier = hsvs_16x8;
     // }
+    // else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
+    //   sns_classifier = sns_16x4;
+    // else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+    //   sns_classifier = sns_8x4; 
+/**********************************************************************/
+  if (cu_w == 32 && cu_h == 32)
+    {
+      sns_classifier = sns_32x32;
+      hsvs_classifier = hsvs_32x32;
+    }
+    else if (cu_w == 16 && cu_h == 16)
+    {
+      sns_classifier = sns_16x16;
+      hsvs_classifier = hsvs_16x16;
+    }
+    else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+    {
+      sns_classifier = sns_32x16;
+      hsvs_classifier = hsvs_32x16;
+    }
+    else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
+    {
+      sns_classifier = sns_16x8;
+      hsvs_classifier = hsvs_16x8;
+    }
+
   
+
+    // if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
+    // {
+    //   sns_classifier = sns_32x16;
+
+    // }
     
     #if s_ns == 0
       sns_classifier = no;
@@ -838,7 +842,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       model       = m_pcEncCfg->s_ns_16x16_model;
       feature_num = 8;
       //th = 0.71;
-      th = 0.81;
+      th = 0.6;
       break;
 
     case sns_8x8:
@@ -846,7 +850,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       model       = m_pcEncCfg->s_ns_8x8_model;
       feature_num = 8;
       //th = 0.62;
-      th = 0.69;
+      th = 0.5;
       break;
 
     case sns_32x16:
@@ -854,7 +858,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       model       = m_pcEncCfg->s_ns_32x16_model;
       feature_num = 8;
       //th = 0.63;
-      th = 0.71;
+      th = 0.5;
       break;
 
     case sns_32x8:
@@ -877,7 +881,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       model       = m_pcEncCfg->s_ns_16x8_model;
       feature_num = 8;
       //th = 0.55;
-      th = 0.56;
+      th = 0.5;
       break;
 
     case sns_16x4:
@@ -899,7 +903,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       break;
     }
     
-    th = 0.1;
+    //th = 0.1;
     if(sns_classifier)
     {
       int max_feature_num = 10;
@@ -924,7 +928,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       else
         sns_rdo_flag = true;
       //if (cu_w == 32 && cu_h == 32)
-      printf("%d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
+      //printf("sns: %d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
 
     #if hs_vs == 0
@@ -936,7 +940,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       {
       case hsvs_32x32:
         model       = m_pcEncCfg->hs_vs_32x32_model;
-        th  = 0.515;
+        th  = 0.52;
         break;
       
       case hsvs_32x16:
@@ -956,7 +960,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       
       case hsvs_16x8:
         model       = m_pcEncCfg->hs_vs_16x8_model;
-        th  = 0.58;
+        th  = 0.60;
         break;
       
       case hsvs_8x8:
@@ -967,7 +971,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       default:
         break;
       }
-      //th = 0.1;
+      th = 0.1;
       if(hsvs_classifier)
       {
         cal_feature_hsvs(partitioner, tempCS, feature, w_over_h);
@@ -998,7 +1002,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
         }
 
         //if (cu_w == 32 && cu_h == 32)
-        //printf("%d,%d,%d,%d,%d,%g,%g\n", pos_x, pos_y, cu_w, cu_h, vs_flag, prob_estimates[0], prob_estimates[1]);
+        //printf("hsvs: %d,%d,%d,%d,%d,%g,%g\n", pos_x, pos_y, cu_w, cu_h, vs_flag, prob_estimates[0], prob_estimates[1]);
         }
     }
 
@@ -1013,8 +1017,10 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
   if(partitioner.chType == CHANNEL_TYPE_LUMA&&currTestM.type != ETM_INTRA&&(!sns_label && sns_flag))
   {
     cureuse = true;
-    printf("CUreuse\n");
+    //if (cu_w == 32 && cu_h == 32)
+    //printf("CUreuse\n");
   }
+  cureuse = false;
 
   do
   {
@@ -1025,11 +1031,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       memcpy(tempCS->prevPLT.curPLT[i], curLastPLT[i], curLastPLTSize[comID] * sizeof(Pel));
     }
     EncTestMode currTestMode = m_modeCtrl->currTestMode();
-    currTestMode.maxCostAllowed = maxCostAllowed;
-    if(partitioner.chType == CHANNEL_TYPE_LUMA)
-    {
-      printf("%d, %d, %d, %d  model: %d\n", partitioner.currArea().lx(), partitioner.currArea().ly(), partitioner.currArea().lwidth(), partitioner.currArea().lheight(), currTestMode.type);
-    }
+    currTestMode.maxCostAllowed = maxCostAllowed;    
 
     if (pps.getUseDQP() && partitioner.isSepTree(*tempCS) && isChroma( partitioner.chType ))
     {
@@ -1118,6 +1120,11 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     else if( currTestMode.type == ETM_INTRA||cureuse)
     {
       if((!sns_label || !sns_flag)){
+    //   if(partitioner.chType == CHANNEL_TYPE_LUMA)
+    // {
+    //   //if (cu_w == 32 && cu_h == 32)
+    // printf("%d, %d, %d, %d  model: %d\n", partitioner.currArea().lx(), partitioner.currArea().ly(), partitioner.currArea().lwidth(), partitioner.currArea().lheight(), currTestMode.type);
+    // }
       if (slice.getSPS()->getUseColorTrans() && !CS::isDualITree(*tempCS))
       {
         bool skipSecColorSpace = false;
@@ -1167,7 +1174,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     }
     else if( isModeSplit( currTestMode ))
     {
-      if(sns_label || !sns_flag){
+      if(sns_label || !sns_flag||currTestMode.type == ETM_SPLIT_QT){
       bool hv_split_flag = true;
       if(hsvs_flag)
       {
@@ -1177,6 +1184,11 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
           hv_split_flag = false;
       }
       if(hv_split_flag){
+      // if(partitioner.chType == CHANNEL_TYPE_LUMA)
+      // {
+      //   //if (cu_w == 32 && cu_h == 32)
+      // printf("%d, %d, %d, %d  model: %d\n", partitioner.currArea().lx(), partitioner.currArea().ly(), partitioner.currArea().lwidth(), partitioner.currArea().lheight(), currTestMode.type);
+      // }
       if (bestCS->cus.size() != 0)
       {
         splitmode = bestCS->cus[0]->splitSeries;
