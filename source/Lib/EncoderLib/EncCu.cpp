@@ -951,13 +951,13 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
 
 #if s_ns
   #define s_ns_64x64   1
-  #define s_ns_32x32   0
-  #define s_ns_16x16   0
+  #define s_ns_32x32   1
+  #define s_ns_16x16   1
   #define s_ns_8x8     0
-  #define s_ns_32x16   0
-  #define s_ns_32x8    0
+  #define s_ns_32x16   1
+  #define s_ns_32x8    1
   #define s_ns_32x4    0
-  #define s_ns_16x8    0
+  #define s_ns_16x8    1
   #define s_ns_16x4    0
   #define s_ns_8x4     0
 #endif
@@ -965,10 +965,10 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
 #if hs_vs
   #define hs_vs_32x32  1
   #define hs_vs_32x16  1
-  #define hs_vs_32x8   1
+  #define hs_vs_32x8   0
   #define hs_vs_16x16  1
   #define hs_vs_16x8   1
-  #define hs_vs_8x8    1
+  #define hs_vs_8x8    0
 #endif
 
   auto startTime  = std::chrono::steady_clock::now();
@@ -1325,7 +1325,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     //if (cu_w == 32 && cu_h == 32)
     //printf("CUreuse\n");
   }
-  //cureuse = false;
+  cureuse = false;
 
   do
   {
@@ -1479,7 +1479,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     }
     else if( isModeSplit( currTestMode ))
     {
-      if(sns_label || !sns_flag/*||currTestMode.type == ETM_SPLIT_QT*/){
+      if(sns_label || !sns_flag||currTestMode.type == ETM_SPLIT_QT){
       bool hv_split_flag = true;
       if(hsvs_flag)
       {
