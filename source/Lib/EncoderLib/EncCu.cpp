@@ -62,86 +62,53 @@
 #include <opencv2/opencv.hpp>
 
 //paraments of standards
-double sns64x64_mean[8] = {3.02514464e+01, 8.94700353e+03,2.94056028e+05, 2.93108775e+05
-, 8.76813329e+03, 9.62133588e+03, 8.74015797e+03, 8.50907431e+02};
-double sns64x64_std[8] = {5.55971801e+00, 1.58099611e+04, 3.68157148e+05, 3.40465986e+05
-, 1.61497164e+04, 2.02508057e+04, 1.79405266e+04, 1.04658654e+03};
+double sns64x64_mean[8] = { 30.23994314755793 , 8930.148979240244 , 296151.14613661816 , 297175.16517357226 , 860.6283486949781 , 8818.645016797313 , 56706.4605478508 , 52574.28637264192 };
+double sns64x64_std[8] = { 5.570561272740123 , 15669.67346628856 , 367233.9504828237 , 343503.1676325897 , 1054.0012228898672 , 16083.492015980277 , 95713.39557038488 , 82406.82191976589 };
 
-double sns32x32_mean[8] = {2.96187624e+01, 8.09621371e+03, 8.62484896e+04, 8.69825264e+04
-, 8.27905547e+03, 8.74260964e+03, 8.65863595e+03, 7.94090733e+02};
-double sns32x32_std[8] = {5.52834652e+00, 1.48828689e+04, 1.03730902e+05, 9.48392924e+04
-, 1.57889608e+04, 1.91213727e+04, 1.84557311e+04, 9.27502120e+02};
+double sns32x32_mean[8] = { 29.65003524317793 , 8146.886630248716 , 87759.15700835767 , 88317.01636290403 , 804.2294079146108 , 8284.618681401671 , 19636.87841103615 , 18158.692578793678 };
+double sns32x32_std[8] = { 5.530228538920632 , 14954.11014086681 , 105162.02803757225 , 95965.09362804933 , 932.5009479804614 , 15686.5205871857 , 30800.79371076709 , 26142.784997020204 };
 
-double sns16x16_mean[8] = {2.87586694e+01, 1.02028654e+04, 3.42287635e+04, 3.26231506e+04
-, 1.10268682e+04, 1.16242450e+04, 1.16159414e+04, 9.60205720e+02};
-double sns16x16_std[8] = {5.58505899e+00, 1.63584489e+04, 3.54812662e+04, 3.01542016e+04
-, 1.80538016e+04, 2.16979583e+04, 2.12226335e+04, 8.90124927e+02};
+double sns16x16_mean[8] = { 28.786546973380712 , 10152.510304843838 , 33929.6709120379 , 32518.58141637055 , 960.8728071815972 , 11042.321270494358 , 9109.682270432018 , 8269.09082974877 };
+double sns16x16_std[8] =  { 5.582319182472159 , 16377.21719162141 , 35078.16201079971 , 30071.43901474147 , 892.4238252359091 , 18174.69958807325 , 11651.620370918548 , 9436.37000732152 };
 
-double sns8x8_mean[8] = {27.92404884, 14750.87588683, 13301.93644213, 11886.20931374
-, 16532.87255704, 18077.95599697, 17003.60709611, 1131.81610681};
-double sns8x8_std[8] = {5.40685756e+00, 1.99827486e+04, 1.27571211e+04, 1.01848991e+04
-, 2.23158082e+04, 2.84202397e+04, 2.57128829e+04, 8.63566228e+02};
+double sns8x8_mean[8] = { 27.930044634588356 , 14746.098176119587 , 13269.12231112015 , 11909.867973865705 , 1131.4899744685797 , 16526.52540430802 , 3993.9435276215104 , 3557.1005567520256 };
+double sns8x8_std[8] = { 5.409030079122717 , 19984.801020245388 , 12716.526588688965 , 10217.903583405723 , 863.8325274346552 , 22307.458828465395 , 4233.699368980527 , 3590.8113316205995 };
 
-double sns32x16_mean[8] = {2.92667072e+01, 4.33847825e+03, 3.11641763e+04, 4.49106829e+04
-, 4.24525420e+03, 3.90452979e+03, 4.88186469e+03, 5.63598288e+02};
-double sns32x16_std[8] = {5.54211297e+00, 8.86520599e+03, 3.18397536e+04, 4.69466388e+04
-, 9.33923684e+03, 1.03743387e+04, 1.27631003e+04, 5.64971595e+02};
+double sns32x16_mean[8] =  { 29.35943634324173 , 4308.449605066367 , 31422.673396896615 , 44478.811109553186 , 567.6176504954198 , 4240.764780800149 , 5392.894688259487 , 9733.829208730604 };
+double sns32x16_std[8] =  { 5.545565106481371 , 8985.426858850167 , 32295.564502417885 , 45772.88209992739 , 573.0031498924972 , 9491.73784192234 , 8048.943355391944 , 14292.295444955635 };
 
-double sns32x8_mean[8] = {2.83853535e+01, 4.96364651e+03, 1.87262699e+04, 2.84301803e+04
-, 4.83960865e+03, 4.98623717e+03, 5.02438565e+03, 6.29835916e+02};
-double sns32x8_std[8] = {5.49886761e+00, 9.81035624e+03, 1.93997797e+04, 3.28893490e+04
-, 1.02812006e+04, 1.22714336e+04, 1.28080048e+04, 5.91193159e+02};
+double sns32x8_mean[8] = { 28.41055373927258 , 4858.780813240703 , 18814.703054760932 , 28044.331354720067 , 625.7065794850838 , 4737.049060073559 , 3401.4242950551698 , 6566.703647323253 };
+double sns32x8_std[8] = { 5.5079698874962375 , 9661.260901938353 , 19587.991800658463 , 32300.58229658335 , 590.00293479029 , 10130.481084991861 , 4843.777749698557 , 9153.912408704768 };
 
-double sns32x4_mean[8] = {27.77308744, 5822.4055466, 11436.36108969, 13899.08214711
-, 5748.62572751, 6842.49761588, 5154.51058832, 708.97857794};
-double sns32x4_std[8] = {5.36476166e+00, 1.06554803e+04, 1.08448565e+04, 1.58709545e+04
-, 1.11328816e+04, 1.43277325e+04, 1.23229005e+04, 6.09444572e+02};
+double sns32x4_mean[8] =  { 27.740062252772194 , 5750.640036314117 , 11633.812528370405 , 13646.081706763503 , 706.981064781791 , 5654.403800012969 , 2326.7056611114713 , 3772.216879579794 };
+double sns32x4_std[8] = { 5.376258562044021 , 10566.474262416277 , 11089.74513143502 , 15578.70520154854 , 608.5532734043769 , 10807.851390702415 , 2817.5703006683916 , 4997.927761881166 };
 
-double sns16x8_mean[8] = {28.17997127, 10040.60608113, 18791.60439497, 19092.91433409
-, 10981.02240577, 12446.32276832, 10573.96949518, 964.55055749};
-double sns16x8_std[8] = {5.50262522e+00, 1.54580278e+04, 1.81562378e+04, 1.69024215e+04
-, 1.71657459e+04, 2.27155701e+04, 1.84270853e+04, 7.89776570e+02};
+double sns16x8_mean[8] =  { 28.190211657655283 , 10016.984217987603 , 18787.26369510748 , 19084.63306079388 , 964.9760451008835 , 10976.528794672293 , 4972.177284715812 , 5170.0650369247 };
+double sns16x8_std[8] = { 5.5047606986564155 , 15446.282465485307 , 18114.004526436667 , 16913.188485142167 , 790.8105010388504 , 17171.74908794391 , 5864.491941731874 , 5641.203490571166 };
 
-double sns16x4_mean[8] = {27.65703214, 12162.80002859, 11458.76891932, 8709.88073502
-, 13274.88206762, 16923.11292365, 10707.22571965 , 1021.82722687};
-double sns16x4_std[8] = {5.36046748e+00, 1.73847581e+04, 1.06833069e+04, 8.05017297e+03
-, 1.92612150e+04, 2.81684573e+04, 1.75000311e+04, 7.92915465e+02};
+double sns16x4_mean[8] = { 27.6796142578125 , 12198.866157226563 , 11496.099125976563 , 8730.488002929687 , 1025.8911328125 , 13357.838071289063 , 3040.4042529296876 , 2579.8413916015625 };
+double sns16x4_std[8] = { 5.360837823372268 , 17425.34839708912 , 10664.152561030072 , 8090.788929475805 , 795.0322598020374 , 19339.267471959192 , 3276.1700129558694 , 2686.971499934231 };
 
-double sns8x4_mean[8] = {27.32830372, 18212.89467279, 8311.85003375, 5564.28717305
-, 20867.50973121, 25785.18929994, 18350.11552906, 1196.90085285};
-double sns8x4_std[8] = {5.20166005e+00, 2.26620921e+04, 7.50624343e+03, 5.05536105e+03
-, 2.57754181e+04, 3.64731471e+04, 2.56582398e+04, 8.70061005e+02};
+double sns8x4_mean[8] = { 27.332654493733433 , 18210.91780961089 , 8300.695205637601 , 5575.346762350725 , 1197.0884846637666 , 20878.517469729297 , 2528.6326046198037 , 1873.073093014879 };
+double sns8x4_std[8] = { 5.198528003745916 , 22659.340132926856 , 7488.337773030909 , 5073.402254114711 , 870.6987027129569 , 25776.809825078162 , 2420.502856753693 , 1841.8807185865123 };
 
-double hsvs32x32_mean[6] = {2.93253568e+01, -1.97358853e+02, 8.14572627e+04, 8.92109835e+04,
- -8.93594373e+03,  9.62194284e+03};
-double hsvs32x32_std[6] = {5.61814474e+00, 9.78819594e+03, 6.92718993e+04, 7.62904551e+04
-, 3.17298839e+04, 3.87034659e+04};
+double hsvs32x32_mean[6] = { 29.340330756876128 , 82612.25304908653 , 90334.28133155993 , -183.63886518771332 , -1081.641638225256 , 1595.931916281871 };
+double hsvs32x32_std[6] = { 5.617710391302242 , 70036.00971650188 , 76330.67736347088 , 9599.458459211233 , 19396.189391668864 , 50341.186285912525 };
 
-double hsvs16x16_mean[6] = { 2.82561158e+01, -6.22362762e+01,  4.79358270e+04,  4.42847168e+04,
- -4.11232302e+03,  3.89784261e+03};
-double hsvs16x16_std[6] = {5.48560270e+00, 1.30617082e+04, 3.78801973e+04, 3.11181837e+04,
- 1.81900622e+04, 1.58008287e+04};
+double hsvs16x16_mean[6] = { 28.277339520494973 , 47863.69979505027 , 44427.990514307814 , -50.73587006960557 , 1322.4142691415313 , -1529.8356999226605 };
+double hsvs16x16_std[6] = { 5.487858117835053 , 37644.205063637644 , 31248.264797664528 , 13062.978288917246 , 12605.75492834301 , 21854.54547900211 };
 
-double hsvs8x8_mean[6] = {27.4871433,   -485.83290354, 16927.15602326, 14929.85398053,
- -1371.2220124,   1153.80011371};
-double hsvs8x8_std[6] = {5.26097691e+00, 1.67597782e+04, 1.34845868e+04, 1.05756774e+04,
- 7.01468325e+03, 5.83649018e+03};
+double hsvs32x16_mean[6] = { 28.561546192213207 , 42117.85907838904 , 58943.78630983399 , 619.0043735576565 , -2930.9262636789995 , 7948.728429985856 };
+double hsvs32x16_std[6] = { 5.613939920390887 , 37189.183207836395 , 52337.62697022514 , 8453.107429185862 , 11692.903804280137 , 32367.35842806607 };
 
-double hsvs32x16_mean[6] = {2.85516314e+01,  6.91337993e+02,  4.16663800e+04,  5.89619749e+04,
- -3.50996427e+03,  8.73744262e+03};
-double hsvs32x16_std[6] = {5.61081701e+00, 8.34134625e+03, 3.64447145e+04, 5.29260513e+04,
- 1.42492715e+04, 2.92717126e+04};
+double hsvs32x8_mean[6] = { 27.95019373938787 , 22570.1538813183 , 34406.041251251685 , 126.79770560320432 , -2891.693108102225 , 4873.361487221908 };
+double hsvs32x8_std[6] = { 5.4941188315226395 , 20632.460123351608 , 32792.45567301366 , 8245.664754660596 , 7983.938060641934 , 18810.026049825265 };
 
-double hsvs32x8_mean[6] = { 2.79623025e+01,  1.54330569e+02,  2.22889865e+04,  3.44984998e+04,
- -2.20627922e+03,  4.38778629e+03};
-double hsvs32x8_std[6] = {5.49612995e+00, 8.35395968e+03, 2.04195926e+04, 3.31760216e+04,
- 8.01593640e+03, 1.69032779e+04};
+double hsvs16x8_mean[6] = { 27.696849255672785 , 25118.51760369996 , 25004.81517560341 , -1255.8181095534037 , -627.3228645758057 , -744.1527388350918 };
+double hsvs16x8_std[6] = { 5.37580462525544 , 20236.683904914004 , 17800.399415118558 , 13231.05787528914 , 7061.663467400905 , 13068.678645603492 };
 
-double hsvs16x8_mean[6] = {27.68739412, -1278.59474074, 25104.2971397,  24987.99268665,
- -2979.74848742,  1650.97092812};
-double hsvs16x8_std[6] = {5.36628153e+00, 1.31840953e+04, 2.03385376e+04, 1.77772246e+04,
- 1.00053917e+04, 9.89257366e+03};
-
+double hsvs8x8_mean[6] = { 27.490479423163112 , 16890.07320858928 , 14953.341590651446 , -441.0936338351217 , 544.1729258390235 , -736.9091442355857 };
+double hsvs8x8_std[6] = { 5.263796650190438 , 13444.362575997367 , 10612.811764167458 , 16751.385347684325 , 4352.7333746634595 , 8420.398554613395 };
 
 int cal_variance(cv::Mat &src)
 {
@@ -189,6 +156,7 @@ void cal_feature_sns(Partitioner& partitioner, const CodingStructure *cs, double
 
   int ngradx   = cv::abs(cv::sum(gradxht)[0] + cv::sum(gradxhb)[0]);
   int ngrady   = cv::abs(cv::sum(gradyht)[0] + cv::sum(gradyhb)[0]);
+
   double gmaxx, gminx, gmaxy, gminy;
 
   cv::minMaxLoc(agrad_x, &gminx, &gmaxx);
@@ -208,8 +176,26 @@ void cal_feature_sns(Partitioner& partitioner, const CodingStructure *cs, double
   int MaxDiffVar = std::max({abs(vartl - vartr), abs(vartl - varbl),
                       abs(vartl - varbr), abs(vartr - varbl),
                       abs(vartr - varbr), abs(varbl - varbr)});
-  int InconsVarH = abs(vartl - vartr) + abs(varbl - varbr);
-  int InconsVarV = abs(vartl - varbl) + abs(vartr - varbr);
+
+  cv::Mat gradxtl = agrad_x(cv::Rect(0, 0, cu_w2, cu_h2));
+  cv::Mat gradxtr = agrad_x(cv::Rect(cu_w2, 0, cu_w2, cu_h2));
+  cv::Mat gradxbl = agrad_x(cv::Rect(0, cu_h2, cu_w2, cu_h2));
+  cv::Mat gradxbr = agrad_x(cv::Rect(cu_w2, cu_h2, cu_w2, cu_h2));
+
+  cv::Mat gradytl = agrad_y(cv::Rect(0, 0, cu_w2, cu_h2));
+  cv::Mat gradytr = agrad_y(cv::Rect(cu_w2, 0, cu_w2, cu_h2));
+  cv::Mat gradybl = agrad_y(cv::Rect(0, cu_h2, cu_w2, cu_h2));
+  cv::Mat gradybr = agrad_y(cv::Rect(cu_w2, cu_h2, cu_w2, cu_h2));
+
+  int MaxDiffgradx = std::max({cv::abs(cv::sum(gradxtl)[0] - cv::sum(gradxtr)[0]), cv::abs(cv::sum(gradxtl)[0] - cv::sum(gradxbl)[0]),
+                          cv::abs(cv::sum(gradxtl)[0] - cv::sum(gradxbr)[0]), cv::abs(cv::sum(gradxtr)[0] - cv::sum(gradxbl)[0]),
+                          cv::abs(cv::sum(gradxtr)[0] - cv::sum(gradxbr)[0]), cv::abs(cv::sum(gradxbl)[0] - cv::sum(gradxbr)[0])});
+  int MaxDiffgrady = std::max({cv::abs(cv::sum(gradytl)[0] - cv::sum(gradytr)[0]), cv::abs(cv::sum(gradytl)[0] - cv::sum(gradybl)[0]),
+                      cv::abs(cv::sum(gradytl)[0] - cv::sum(gradybr)[0]), cv::abs(cv::sum(gradytr)[0] - cv::sum(gradybl)[0]),
+                      cv::abs(cv::sum(gradytr)[0] - cv::sum(gradybr)[0]), cv::abs(cv::sum(gradybl)[0] - cv::sum(gradybr)[0])});
+
+
+  
 
   if (w_over_h)
   {
@@ -217,10 +203,10 @@ void cal_feature_sns(Partitioner& partitioner, const CodingStructure *cs, double
     feature[1] = var;
     feature[2] = ngradx;
     feature[3] = ngrady;
-    feature[4] = MaxDiffVar;
-    feature[5] = InconsVarH;
-    feature[6] = InconsVarV;
-    feature[7] = gmx;
+    feature[4] = gmx;
+    feature[5] = MaxDiffVar;
+    feature[6] = MaxDiffgradx;
+    feature[7] = MaxDiffgrady;
   }
   else
   {
@@ -228,10 +214,10 @@ void cal_feature_sns(Partitioner& partitioner, const CodingStructure *cs, double
     feature[1] = var;
     feature[2] = ngrady;
     feature[3] = ngradx;
-    feature[4] = MaxDiffVar;
-    feature[5] = InconsVarV;
-    feature[6] = InconsVarH;
-    feature[7] = gmx;
+    feature[4] = gmx;
+    feature[5] = MaxDiffVar;
+    feature[6] = MaxDiffgrady;
+    feature[7] = MaxDiffgradx;
   }
 
   //standards
@@ -280,8 +266,8 @@ void cal_feature_hsvs(Partitioner& partitioner, const CodingStructure *cs, doubl
   int ndgradxv = cv::abs(cv::sum(gradxvl)[0] - cv::sum(gradxvr)[0]);
   int ndgradyh = cv::abs(cv::sum(gradyht)[0] - cv::sum(gradyhb)[0]);
   int ndgradyv = cv::abs(cv::sum(gradyvl)[0] - cv::sum(gradyvr)[0]);
-  int ndgradx = ndgradxh - ndgradxv;
-  int ndgrady = ndgradyh - ndgradyv;
+  int ndgradx = ndgradxh - ndgradyv;
+  int ndgrady = ndgradyh - ndgradxv;
 
   cv::Mat Lht = orgL(cv::Rect(0, 0, cu_w, cu_h2));
   cv::Mat Lhb = orgL(cv::Rect(0, cu_h2, cu_w, cu_h2));
@@ -299,19 +285,19 @@ void cal_feature_hsvs(Partitioner& partitioner, const CodingStructure *cs, doubl
  
   if (w_over_h)
   {
-    feature[0] = cs->baseQP;
-    feature[1] = ndvar;
-    feature[2] = ngradx;
-    feature[3] = ngrady;
+    feature[0] = cs->baseQP;  
+    feature[1] = ngradx;
+    feature[2] = ngrady;
+    feature[3] = ndvar;
     feature[4] = ndgradx;
     feature[5] = ndgrady;
   }
   else
   {
     feature[0] = cs->baseQP;
-    feature[1] = ndvar;
-    feature[2] = ngrady;
-    feature[3] = ngradx;
+    feature[1] = ngrady;
+    feature[2] = ngradx;
+    feature[3] = ndvar;
     feature[4] = ndgrady;
     feature[5] = ndgradx;
   }
@@ -946,13 +932,17 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
 
 
   #define s_ns  1
-  #define hs_vs 0
+  #define hs_vs 1
   #define TH    0
 
+//1 : 0000110100  110110
+//2 : 0000110100  000000
+//3 : 0000110100  111110
+
 #if s_ns
-  #define s_ns_64x64   1
-  #define s_ns_32x32   1
-  #define s_ns_16x16   1
+  #define s_ns_64x64   0
+  #define s_ns_32x32   0
+  #define s_ns_16x16   0
   #define s_ns_8x8     0
   #define s_ns_32x16   1
   #define s_ns_32x8    1
@@ -986,7 +976,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
   bool   hsvs_flag = false;
   bool   hs_flag      = false;
   bool   vs_flag      = false;
-  bool   sns_rdo_flag = false;
+  //bool   sns_rdo_flag = false;
 
   bool canNo, canQt, canBh, canTh, canBv, canTv;
   bool cansplit = true;
@@ -1057,10 +1047,10 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     else if (cu_w == 8 && cu_h == 8)
     {
       #if s_ns_8x8
-        sns_classifier = sns_8x8;
+      sns_classifier = sns_8x8;
       #endif
-      #if hs_vs_8x8
-        hsvs_classifier = hsvs_8x8;
+      #if s_ns_8x8
+      hsvs_classifier = hsvs_8x8;
       #endif
     }
     else if ((cu_w == 32 && cu_h == 16) || (cu_w == 16 && cu_h == 32))
@@ -1084,7 +1074,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     else if ((cu_w == 32 && cu_h == 4) || (cu_w == 4 && cu_h == 32))
     {
       #if s_ns_32x4
-        sns_classifier = sns_32x4;
+      sns_classifier = sns_32x4;
       #endif
     }
     else if ((cu_w == 16 && cu_h == 8) || (cu_w == 8 && cu_h == 16))
@@ -1099,15 +1089,15 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     else if ((cu_w == 16 && cu_h == 4) || (cu_w == 4 && cu_h == 16))
     {
       #if s_ns_16x4
-        sns_classifier = sns_16x4;
+       sns_classifier = sns_16x4;
       #endif
     }
-    else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
-    {
-      #if s_ns_8x4
-        sns_classifier = sns_8x4; 
-      #endif
-    }
+     else if ((cu_w == 8 && cu_h == 4) || (cu_w == 4 && cu_h == 8))
+     {
+       #if s_ns_8x4
+       sns_classifier = sns_8x4; 
+       #endif
+     }
     
 
     struct svm_model *model = NULL;
@@ -1157,7 +1147,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       standard_s =  sns32x8_std;
       th = 0.70;
       break;
-
+    
     case sns_32x4:
       model       = m_pcEncCfg->s_ns_32x4_model;
       standard_m =  sns32x4_mean;
@@ -1171,7 +1161,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       standard_s =  sns16x8_std;
       th = 0.5;
       break;
-
+    
     case sns_16x4:
       model       = m_pcEncCfg->s_ns_16x4_model;
       standard_m =  sns16x4_mean;
@@ -1218,13 +1208,14 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
       {
         sns_flag = true;
       }
-      else
-        sns_rdo_flag = true;
+      // else
+      //   sns_rdo_flag = true;
       //if (cu_w == 32 && cu_h == 32)
       //printf("sns: %d,%d,%d,%d,%g,%g,%g\n", pos_x, pos_y, cu_w, cu_h, sns_label, prob_estimates[0], prob_estimates[1]);
     }
 
-    if (((!s_ns) ||(s_ns&&((sns_label&&sns_flag)||sns_rdo_flag))))
+    //if (((!s_ns) ||(s_ns&&((sns_label&&sns_flag)/*||sns_rdo_flag*/))))
+    if(hs_vs)
     {
       switch (hsvs_classifier)
       {
@@ -1325,7 +1316,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     //if (cu_w == 32 && cu_h == 32)
     //printf("CUreuse\n");
   }
-  cureuse = false;
+  //cureuse = false;
 
   do
   {
@@ -1479,7 +1470,7 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     }
     else if( isModeSplit( currTestMode ))
     {
-      if(sns_label || !sns_flag||currTestMode.type == ETM_SPLIT_QT){
+      if(sns_label || !sns_flag/*||currTestMode.type == ETM_SPLIT_QT*/){
       bool hv_split_flag = true;
       if(hsvs_flag)
       {

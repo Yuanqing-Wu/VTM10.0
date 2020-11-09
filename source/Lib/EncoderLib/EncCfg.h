@@ -804,53 +804,54 @@ public:
     auto startTime  = std::chrono::steady_clock::now();
     string model_path      = "/home/medialab-313/wgq/ISCAS/VTM10/SVM/libsvmmodel/";
     //string model_path = "E:\\0-Research\\01-VVC\\VTM_10_0_svm\\libsvmmodel\\";
-        string s_ns_64x64_path = model_path + "s_ns_64x64.txt";
+        string s_ns_64x64_path = model_path + "s-ns_64x64.txt";
         s_ns_64x64_model             = svm_load_model(s_ns_64x64_path.c_str());
 
-        string s_ns_32x32_path = model_path + "s_ns_32x32.txt";
+        string s_ns_32x32_path = model_path + "s-ns_32x32.txt";
         s_ns_32x32_model             = svm_load_model(s_ns_32x32_path.c_str());
 
-        string s_ns_16x16_path = model_path + "s_ns_16x16.txt";
+        string s_ns_16x16_path = model_path + "s-ns_16x16.txt";
         s_ns_16x16_model             = svm_load_model(s_ns_16x16_path.c_str());
 
-        string s_ns_8x8_path   = model_path + "s_ns_8x8.txt";
+        string s_ns_8x8_path   = model_path + "s-ns_8x8.txt";
         s_ns_8x8_model               = svm_load_model(s_ns_8x8_path.c_str());
 
-        string s_ns_32x16_path = model_path + "s_ns_32x16.txt";
+        string s_ns_32x16_path = model_path + "s-ns_32x16.txt";
         s_ns_32x16_model             = svm_load_model(s_ns_32x16_path.c_str());
 
-        string s_ns_32x8_path  = model_path + "s_ns_32x8.txt";
+        string s_ns_32x8_path  = model_path + "s-ns_32x8.txt";
         s_ns_32x8_model              = svm_load_model(s_ns_32x8_path.c_str());
 
-        string s_ns_32x4_path  = model_path + "s_ns_32x4.txt";
+        string s_ns_32x4_path  = model_path + "s-ns_32x4.txt";
         s_ns_32x4_model              = svm_load_model(s_ns_32x4_path.c_str());
 
-        string s_ns_16x8_path  = model_path + "s_ns_16x8.txt";
+        string s_ns_16x8_path  = model_path + "s-ns_16x8.txt";
         s_ns_16x8_model              = svm_load_model(s_ns_16x8_path.c_str());
 
-        string s_ns_16x4_path  = model_path + "s_ns_16x4.txt";
+        string s_ns_16x4_path  = model_path + "s-ns_16x4.txt";
         s_ns_16x4_model              = svm_load_model(s_ns_16x4_path.c_str());
 
-        string s_ns_8x4_path   = model_path + "s_ns_8x4.txt";
+        string s_ns_8x4_path   = model_path + "s-ns_8x4.txt";
         s_ns_8x4_model               = svm_load_model(s_ns_8x4_path.c_str()); 
 
-        string hs_vs_32x32_path   = model_path + "hs_vs_32x32.txt";
+        string hs_vs_32x32_path   = model_path + "hs-vs_32x32.txt";
         hs_vs_32x32_model               = svm_load_model(hs_vs_32x32_path.c_str()); 
 
-        string hs_vs_32x16_path   = model_path + "hs_vs_32x16.txt";
+        string hs_vs_32x16_path   = model_path + "hs-vs_32x16.txt";
         hs_vs_32x16_model               = svm_load_model(hs_vs_32x16_path.c_str()); 
 
-        string hs_vs_32x8_path   = model_path + "hs_vs_32x8.txt";
+        string hs_vs_32x8_path   = model_path + "hs-vs_32x8.txt";
         hs_vs_32x8_model               = svm_load_model(hs_vs_32x8_path.c_str()); 
 
-        string hs_vs_16x16_path   = model_path + "hs_vs_16x16.txt";
+        string hs_vs_16x16_path   = model_path + "hs-vs_16x16.txt";
         hs_vs_16x16_model               = svm_load_model(hs_vs_16x16_path.c_str()); 
 
-        string hs_vs_16x8_path   = model_path + "hs_vs_16x8.txt";
+        string hs_vs_16x8_path   = model_path + "hs-vs_16x8.txt";
         hs_vs_16x8_model               = svm_load_model(hs_vs_16x8_path.c_str()); 
 
-        string hs_vs_8x8_path   = model_path + "hs_vs_8x8.txt";
+        string hs_vs_8x8_path   = model_path + "hs-vs_8x8.txt";
         hs_vs_8x8_model               = svm_load_model(hs_vs_8x8_path.c_str()); 
+
       auto endTime = std::chrono::steady_clock::now();
     SvmTime += std::chrono::duration_cast<std::chrono::microseconds>( endTime - startTime).count();
   }
@@ -893,7 +894,7 @@ public:
       struct svm_model *hs_vs_32x8_model   = NULL;
       struct svm_model *hs_vs_16x16_model   = NULL;
       struct svm_model *hs_vs_16x8_model   = NULL;
-      struct svm_model *hs_vs_8x8_model   = NULL;   
+      struct svm_model *hs_vs_8x8_model   = NULL; 
 
 
   void setProfile(Profile::Name profile) { m_profile = profile; }
